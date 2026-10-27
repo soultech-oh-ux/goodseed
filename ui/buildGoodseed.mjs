@@ -1,0 +1,10 @@
+import { build } from 'esbuild';
+import { mkdir, copyFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+const root=path.dirname(fileURLToPath(import.meta.url));
+const dist=path.join(root,'dist');
+await mkdir(dist,{recursive:true});
+await build({entryPoints:[path.join(root,'src/main.ts')],bundle:true,platform:'browser',minify:true,outdir:dist});
+for(const [from,to] of [['index.html','index.html'],['src/style.css','style.css'],['src/goodseed.css','goodseed.css'],['node_modules/@xterm/xterm/css/xterm.css','xterm.css']])await copyFile(path.join(root,from),path.join(dist,to));
+console.log('Goodseed UI built');

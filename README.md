@@ -39,4 +39,3 @@ Windows x64 실행 파일을 빌드했습니다. 안정판으로 검증한 상�
 ## 라이선스
 
 [LICENSE](LICENSE)의 MIT 저작권 고지와 [NOTICE.md](NOTICE.md)의 출처 정보를 유지합니다.
-

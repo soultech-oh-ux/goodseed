@@ -1,0 +1,72 @@
+[workspace]
+members = ["src-tauri"]
+# 벤더링된 portable-pty(ConPTY 창 flash 수정 패치)는 워크스페이스 멤버가 아니라 path 의존이다.
+exclude = ["vendor/portable-pty"]
+
+[package]
+name = "cys-terminal"
+version = "0.1.0"
+edition = "2021"
+description = "cys — the CYSJavis terminal: bidirectional socket IPC, multi-agent OS (CYSJavis Pack), governance, heartbeat"
+license = "MIT"
+
+[lib]
+name = "cys"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cysd"
+path = "src/bin/cysd/main.rs"
+
+[[bin]]
+name = "cys"
+path = "src/bin/cys.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "signal", "process"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# ★벤더링 + 패치: ConPTY 자식 생성에 CREATE_NO_WINDOW 추가(Win11 검은 창 flash 차단). vendor/portable-pty/ 참조.
+portable-pty = { path = "vendor/portable-pty" }
+vt100 = "0.15"
+clap = { version = "4", features = ["derive"] }
+regex = "1"
+sysinfo = "0.33"
+strip-ansi-escapes = "0.2"
+dirs = "6"
+libc = "0.2"
+chrono = "0.4"
+rusqlite = { version = "0.32", features = ["bundled"] }
+sha2 = "0.10"
+# 무중단 팩 채널 manifest 서명검증(§7-①): verify-only 순수 Rust(서명키 미포함=공격면 최소).
+minisign-verify = "0.2"
+# tauri 형식 pubkey(전체 .pub 파일 base64)·서명 자산 디코드용(verify 경로 한정).
+base64 = "0.22"
+# WP-6 R-SIG-1: pack.tar.gz를 in-Rust로 엔트리별 검증하며 전개(외부 `tar` 하드닝 플래그 0 →
+# 미검증 심링크/`..`/절대경로 traversal이 서명검증 前 staging 밖 임의쓰기하던 CRIT 차단).
+# flate2/tar는 이미 의존 그래프·Cargo.lock에 존재(전이) — 직접 의존 승격으로 오프라인 빌드 가능.
+flate2 = "1"
+tar = "0.4"
+
+# 테스트 fixture 전용: minisign keypair 생성·서명(서명 roundtrip 테스트). 런타임 의존 아님.
+[dev-dependencies]
+minisign = "0.7"
+
+# 빌드타임 폐기 명단 형태 검증(DESIGN-pro-license §5 — 손상 revoked-licenses.json = 빌드 실패).
+[build-dependencies]
+serde_json = "1"
+
+# Windows 전용: named pipe에 owner-only DACL을 박아 UDS 0o600 단일-UID 봉인과 대칭화한다.
+# (기본 named pipe DACL은 같은 머신의 임의 로컬 사용자에게 read/write를 허용 — 인증 없는
+#  제어 채널(send_text·send_key·ledger.kill)이 노출되는 권한 우회 비대칭을 막는다.)
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_System_Pipes",
+    "Win32_System_JobObjects",  # ★D3(W5): Job Object(KILL_ON_JOB_CLOSE) — PTY 자식 동반사망
+    "Win32_System_Threading",   # ★D3(W5): OpenProcess(자식 pid → Job 편입)
+    "Win32_Security_Cryptography",  # R-CLI-1: BCryptGenRandom(CNG CSPRNG) — 브리지 토큰 예측가능 폴백 제거
+    "Win32_System_Registry",    # ★stale PATH: RegGetValueW(HKLM/HKCU Environment\Path 신선 재합성)
+] }

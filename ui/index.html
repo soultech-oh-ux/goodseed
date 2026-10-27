@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>Goodseed — AI 작업 공간</title>
+  <link rel="stylesheet" href="./xterm.css" />
+  <link rel="stylesheet" href="./style.css" />
+<meta name="viewport" content="width=device-width,initial-scale=1" /><link rel="stylesheet" href="./goodseed.css" /></head>
+<body>
+  <header id="topbar">
+    <span id="brand"><span class="gs-mark">g</span> Goodseed <small>WORKSPACE</small></span>
+    <span id="daemon-info">daemon: connecting…</span>
+    <span class="spacer"></span><button id="gs-search" title="명령·노드 검색 (Ctrl+K)">⌕ 명령 검색 <kbd>Ctrl K</kbd></button><button id="gs-home">시작 안내</button><button id="gs-focus" aria-pressed="false">집중 모드</button>
+    <button id="btn-new" title="새 surface (⌘T)">＋ 터미널</button>
+    <button id="btn-split-h" title="오른쪽 분할 (⌘D)">좌우 분할</button>
+    <button id="btn-split-v" title="아래 분할 (⌘⇧D)">상하 분할</button>
+    <button id="btn-equalize" title="역할별 표준 배치로 정렬 — master·CSO(좌) · 워커(가운데 균등) · agy·codex(우) · 수동 크기 조절엔 영향 없음">정렬</button>
+    <button id="btn-close" title="pane 닫기 — 자식 트리 강제 종료 (⌘W)">닫기</button>
+    <button id="btn-files" title="파일 트리 (선택한 surface의 폴더)">파일</button>
+    <button id="btn-cc" title="Control Center — 실시간 플릿·사용량·시스템 모니터링 · 승인 Feed">작업 현황 <span id="cc-pending-badge" class="badge" hidden>0</span></button>
+    <button id="btn-update" title="업데이트 확인">정보 <span id="update-badge" class="badge" hidden>!</span></button>
+    <button id="btn-restart-daemon" title="데몬 재시작 — 진행 중인 노드에 저장(drain) 신호를 보낸 뒤 데몬을 새로 켜고, 부서·노드를 대화 기억까지 자동 복원합니다(피닉스). 마지막 미저장분은 손실될 수 있습니다.">↻ 재시작</button>
+    <button id="btn-theme" title="배경 테마 — 배경색 커스텀 지정">테마</button>
+  </header>
+  <div id="body-row">
+    <nav id="wsbar">
+      <div id="wsbar-head"><span>워크스페이스</span><button id="btn-ws-font-minus" title="사이드바 글자 축소">A−</button><button id="btn-ws-font-plus" title="사이드바 글자 확대">A＋</button><button id="btn-master-start" title="CEO 시작 — 본부(base)에 마스터 오브 마스터 노드를 기동합니다. 부서가 있으면 승인 후 CEO 규약으로 승격됩니다. 마스터는 조직(본부/부서) 단위 1명·부서장은 부서 탭의 ▶부서장으로.">▶CEO</button><button id="btn-dept-master" title="부서장 시작 — 지금 보고 있는 부서 탭의 데몬에 마스터(부서장) 노드를 기동합니다(부서마다 독립 1명).">▶부서장</button><button id="btn-ws-dept" title="새 부서 — 클릭하면 부서 선택(미사용 부서 + 레거시 dept-N)">＋부서</button><button id="btn-ws-new" title="새 워크스페이스">＋</button></div>
+      <div id="ws-tabs"></div>
+    </nav>
+    <div id="wsbar-drag" title="드래그로 사이드바 폭 조절 · 더블클릭=기본폭"></div>
+    <aside id="ft-panel" hidden>
+      <div id="ft-head"><span id="ft-root-label">파일</span><button id="btn-ft-close">×</button></div>
+      <div id="ft-body"></div>
+    </aside>
+    <main id="root"></main>
+    <aside id="cc-panel" hidden>
+      <div id="cc-header">
+        <span class="cc-pulse"></span>
+        <span class="cc-title">Goodseed 작업 현황</span>
+        <span id="cc-livebadge" class="cc-badge idle" title="LIVE = 작업 중 노드 1개 이상 / IDLE = 전체 대기">IDLE</span>
+        <span id="cc-alertbadge" class="cc-alert-badge" hidden></span>
+        <button id="btn-cc-density" title="한눈에 보기 / 상세 보기 전환 (⌘G)">👁 한눈에</button>
+        <button id="btn-cc-glance-face" title="한눈에 면 전환: Live ↔ 작업">📋 작업</button>
+        <button id="btn-install-cli" title="Goodseed 폴더에서 CLI를 실행하는 방법">CLI 사용 안내</button>
+        <span id="cc-clock"></span>
+        <button id="btn-cc-close" title="닫기">×</button>
+      </div>
+      <div id="cc-tabs">
+        <button class="cc-tab" data-view="live">Live</button>
+        <button class="cc-tab" data-view="eff">비용·효율</button>
+        <button class="cc-tab" data-view="skills">스킬·에이전트</button>
+        <button class="cc-tab" data-view="sessions">세션</button>
+        <button class="cc-tab" data-view="weekly">추세·주간</button>
+        <button class="cc-tab" data-view="learn">학습</button>
+        <button class="cc-tab" data-view="board">스킬 보드</button>
+        <button class="cc-tab" data-view="tasks">작업</button>
+        <button class="cc-tab" data-view="feed">승인 Feed <span id="cc-feed-tabbadge" class="badge" hidden>0</span></button>
+        <button class="cc-tab active" data-view="office">🏢 오피스</button>
+      </div>
+      <div id="cc-body">
+        <div id="cc-view-live">
+          <div id="cc-alerts" class="cc-alerts"></div>
+          <div class="cc-gauges">
+            <div class="cc-radar" id="cc-radar" title="활성 노드 비율 = 작업중 노드 / 온라인 노드">
+              <span class="cc-radar-sweep"></span>
+              <span class="cc-radar-val" id="cc-radar-val">0%</span>
+              <span class="cc-radar-sub" id="cc-radar-sub">0/0 활성</span>
+            </div>
+            <div class="cc-uptime">
+              <span class="cc-uptime-val" id="cc-uptime-val">00:00:00</span>
+              <span class="cc-sub">가동시간</span>
+            </div>
+          </div>
+          <div class="cc-kpi" id="cc-kpi"></div>
+          <div class="cc-section"><div class="cc-h">플릿 현황</div><div id="cc-fleet"></div></div>
+          <div class="cc-section"><div class="cc-h">토큰 · 비용</div>
+            <div id="cc-token-bars"></div>
+            <div class="cc-token-stats" id="cc-token-stats"></div>
+            <div class="cc-mix" id="cc-model-mix"></div>
+            <div class="cc-spark" id="cc-spark"></div>
+          </div>
+          <div class="cc-section"><div class="cc-h">하드웨어</div><div id="cc-hw"></div></div>
+        </div>
+        <div id="cc-view-eff" hidden>
+          <div class="cc-eff-win" id="cc-eff-win">
+            <button class="cc-win active" data-window="today">오늘</button>
+            <button class="cc-win" data-window="7d">7일</button>
+            <button class="cc-win" data-window="all">전체</button>
+          </div>
+          <div class="cc-kpi" id="cc-eff-kpi"></div>
+          <div class="cc-section"><div class="cc-h">토큰 4분해</div><div id="cc-eff-tokens"></div></div>
+          <div class="cc-section"><div class="cc-h">모델별 비용</div><div id="cc-eff-models"></div></div>
+          <div class="cc-section"><div class="cc-h">에이전트 믹스</div><div id="cc-eff-agents"></div></div>
+          <div class="cc-section"><div class="cc-h">조직 단위 비용 (tier · 역할)</div><div id="cc-eff-tiers"></div></div>
+          <div class="cc-section"><div class="cc-h">생산성</div><div class="cc-token-stats" id="cc-eff-prod"></div></div>
+        </div>
+        <div id="cc-view-skills" hidden>
+          <div class="cc-eff-win" id="cc-skills-win">
+            <button class="cc-win active" data-window="today">오늘</button>
+            <button class="cc-win" data-window="7d">7일</button>
+            <button class="cc-win" data-window="all">전체</button>
+          </div>
+          <div class="cc-kpi" id="cc-skills-kpi"></div>
+          <div class="cc-section"><div class="cc-h">🔥 반복 실패 (exit≠0)</div><div id="cc-skills-fail"></div></div>
+          <div class="cc-section"><div class="cc-h">스킬 호출 TOP</div><div id="cc-skills-skills"></div></div>
+          <div class="cc-section"><div class="cc-h">툴 호출 TOP</div><div id="cc-skills-tools"></div></div>
+          <div class="cc-section"><div class="cc-h">서브에이전트 위임</div><div id="cc-skills-agents"></div></div>
+        </div>
+        <div id="cc-view-sessions" hidden>
+          <div class="cc-eff-win" id="cc-sessions-win">
+            <button class="cc-win" data-window="today">오늘</button>
+            <button class="cc-win active" data-window="7d">7일</button>
+            <button class="cc-win" data-window="all">전체</button>
+            <button class="cc-win" id="cc-sessions-star-filter">⭐만</button>
+            <button class="cc-win" id="cc-sessions-redact" title="세션 경로(PII)를 해시로 가림 — 공유·스크린샷용(집계만)">🔒 PII 가림</button>
+          </div>
+          <div id="cc-sessions-list"></div>
+          <div id="cc-session-detail" class="cc-section" hidden></div>
+        </div>
+        <div id="cc-view-weekly" hidden>
+          <div class="cc-kpi" id="cc-weekly-wow"></div>
+          <div class="cc-section"><div class="cc-h">이번주 vs 지난주 (일별 토큰)</div><div id="cc-weekly-daily"></div></div>
+          <div class="cc-section"><div class="cc-h">🔥 효율 리더 (노드/역할별)</div><div id="cc-weekly-leaders"></div></div>
+          <div class="cc-section"><div class="cc-h">스킬 자산</div><div id="cc-weekly-skills"></div></div>
+        </div>
+        <div id="cc-view-learn" hidden>
+          <div class="cc-kpi" id="cc-learn-kpi"></div>
+          <div class="cc-section"><div class="cc-h">🔬 학습 라운드 타임라인</div><div id="cc-learn-timeline"></div></div>
+          <div class="cc-section"><div class="cc-h">♻️ 채택 · 롤백 (retention)</div><div id="cc-learn-retention"></div></div>
+          <div class="cc-section"><div class="cc-h">🧭 발견 누적 (Discovery)</div><div id="cc-learn-discovery"></div></div>
+          <div class="cc-section"><div class="cc-h">⏳ 자율추천 대기 (승인은 승인 Feed 탭)</div><div id="cc-learn-pending"></div></div>
+        </div>
+        <div id="cc-view-board" hidden>
+          <div class="cc-board-note">클릭 = 보이는 일회용 워커가 task-prompt 티켓(성공기준·4규칙) 경유로 실행합니다. 산출물은 "AI 보조 생성 · 오너 검수 전"입니다.</div>
+          <div class="cc-section"><div class="cc-h">스킬 보드 (클릭 = 일회용 워커 실행)</div><div id="cc-board-domains"></div></div>
+          <div class="cc-section"><div class="cc-h">산출물 회수 (~/.cys/_round/skill-out)</div><div id="cc-board-out"></div></div>
+        </div>
+        <div id="cc-view-tasks" hidden>
+          <div class="cc-board-note">모든 부서의 모든 노드가 지금 무슨 업무를 하는지 실시간 표시(관측 전용·입력 주입 없음). 📍자기보고 = 노드가 보고한 업무 · ⚙파생 = 활동 추론.</div>
+          <div id="cc-tasks-depts"></div>
+        </div>
+        <div id="cc-view-feed" hidden>
+          <div class="cc-board-note">노드·CSO·워커가 올린 승인 요청을 검토하고 Allow/Deny 합니다. 대기 건수는 상단 Control Center 버튼과 이 탭에 표시됩니다.</div>
+          <div class="cc-section"><div class="cc-h">승인 Feed</div><div id="cc-feed-items"></div></div>
+        </div>
+        <div id="cc-view-office" hidden>
+          <div id="cc-office-hint" class="cc-board-note" hidden>메타버스 오피스 브리지가 꺼져 있습니다 —
+            cysd가 60초 내 자동 재기동합니다. 급하면 수동 기동:
+            <code>python3 ~/.cys/pack/bin/javis_hud_bridge.py</code> 후 이 탭을 다시 여세요.</div>
+          <iframe id="cc-office-frame" title="Metaverse Office"></iframe>
+        </div>
+        <div id="cc-footer"></div>
+      </div>
+    </aside>
+  </div>
+  <div id="toasts"></div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

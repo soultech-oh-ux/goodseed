@@ -1,0 +1,43 @@
+:root { --accent: #78ddb1; --bar:#151e20; --border:#2c3b3e; }
+#topbar { min-height:92px;height:auto;flex-wrap:wrap;padding:12px 18px;gap:7px;align-content:center; }
+#brand { display:flex;gap:9px;align-items:center;color:#edf9f2;font-size:20px;letter-spacing:-.6px;min-width:230px; }
+#brand small {font-size:9px;letter-spacing:1.6px;color:#91a69e;margin-left:5px;}
+.gs-mark {display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#78ddb1;color:#10231a;font-size:26px;font-weight:800;}
+#daemon-info {max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#topbar button {border-radius:7px;padding:6px 10px;min-height:30px;font-size:12px;}
+#gs-search {min-width:200px;text-align:left;color:#c7dcd4;background:#20332e;}
+#gs-search kbd {float:right;margin-left:20px;color:#a9c2b5;font-size:10px;}
+#btn-new {background:#78ddb1;color:#12271c;border-color:#78ddb1;font-weight:700;}
+#body-row {height:calc(100% - 92px);}
+#wsbar {background:#111a1c;}
+#wsbar-head {flex-wrap:wrap;padding:12px 10px;gap:6px;}
+#wsbar-head>span {width:100%;font-weight:700;letter-spacing:.4px;margin-bottom:6px;}
+button:focus-visible {outline:2px solid #78ddb1;outline-offset:3px;}
+.gs-focused #wsbar,.gs-focused #wsbar-drag,.gs-focused #cc-panel,.gs-focused #ft-panel {display:none!important;}
+.gs-focused #gs-focus {background:#2d5846;}
+.gs-guide {width:min(920px,calc(100vw - 48px));max-height:calc(100vh - 48px);padding:30px 34px;border:1px solid #354c43;border-radius:18px;background:#14201d;color:#edf6f0;box-shadow:0 24px 100px #0009;overflow:auto;}
+.gs-guide::backdrop {background:#040c0ac9;backdrop-filter:blur(5px);}
+.gs-guide-heading {display:flex;align-items:center;justify-content:space-between;}
+.gs-eyebrow {font-size:10px;letter-spacing:2px;color:#8bc9a8;}
+.gs-guide button {cursor:pointer;font-family:inherit;}
+#gs-dismiss {border:0;background:transparent;color:#b7ccc0;font-size:26px;}
+.gs-guide h1 {font-size:38px;letter-spacing:-1.8px;line-height:1.2;margin:22px 0 10px;}
+.gs-intro {font-size:14px;color:#a9bdb2;margin-bottom:26px;}
+.gs-cards {display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.gs-cards>button {display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:20px;border:1px solid #395348;border-radius:12px;background:#1d3028;color:#edf6f0;text-align:left;transition:border-color .15s,background .15s;}
+.gs-cards>button:hover {background:#294535;border-color:#78ddb1;}
+.gs-card-icon {color:#93e9b5;font-size:26px;line-height:1;}
+.gs-cards strong {font-size:16px;}.gs-cards span:not(.gs-card-icon) {color:#a8c4b4;font-size:12px;}
+.gs-cards kbd,.gs-card-link {margin-top:8px;font-size:11px;color:#a8d8bb;}
+.gs-guide-bottom {display:grid;grid-template-columns:1.1fr 1fr;gap:40px;margin-top:22px;}
+.gs-guide h2 {font-size:14px;color:#def3e6;margin:15px 0 12px;}
+.gs-guide ol {padding-left:18px;color:#b4cabd;line-height:2.1;font-size:12px;}
+.gs-links {display:flex;gap:8px;}.gs-links button {background:#263b31;border:1px solid #3a5344;border-radius:6px;padding:6px 12px;color:#c2e8d0;}
+.gs-guide dl {display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;}.gs-guide dt {color:#b4cabd;}.gs-guide dd {margin:0;color:#8fae9a;}
+.gs-note {font-size:11px;color:#8fa79a;line-height:1.6;margin-top:18px;}
+.gs-guide footer {display:flex;align-items:center;justify-content:space-between;border-top:1px solid #2f463a;margin-top:20px;padding-top:17px;gap:20px;font-size:11px;color:#9bb6a5;line-height:1.8;}.gs-guide footer strong {font-weight:500;color:#c7dfd0;}.gs-guide footer small {font-size:10px;}
+.gs-guide input {accent-color:#78ddb1;vertical-align:middle;}
+@media(max-width:1150px){#brand{min-width:180px;}#brand small{display:none;}#daemon-info{display:none;}#topbar{padding:10px;}#gs-search{min-width:170px;}}
+@media(max-width:700px){.gs-cards{grid-template-columns:1fr;}.gs-guide-bottom{grid-template-columns:1fr;gap:0;}.gs-guide{padding:20px;}.gs-guide footer{align-items:flex-start;flex-direction:column;}.gs-guide h1{font-size:30px;}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;}}
+body {display:flex;flex-direction:column;} #topbar{flex:none;} #body-row{flex:1;min-height:0;height:auto;}

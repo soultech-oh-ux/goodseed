@@ -1,0 +1,32 @@
+name: Goodseed checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.4'
+      - run: npm ci
+        working-directory: ui
+      - run: npm run typecheck
+        working-directory: ui
+      - run: npm run build
+        working-directory: ui
+      - run: bun test ./src
+        working-directory: ui
+  rust-check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo check --bin cys --bin cysd

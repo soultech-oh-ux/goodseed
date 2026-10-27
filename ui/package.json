@@ -1,0 +1,19 @@
+{
+  "name": "goodseed-ui",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "node buildGoodseed.mjs",
+    "typecheck": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --lib ES2022,DOM --skipLibCheck src/main.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@tauri-apps/plugin-notification": "^2.3.3",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  }
+}
