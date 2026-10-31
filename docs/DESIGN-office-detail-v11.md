@@ -58,6 +58,6 @@
 
 ## 4. 불변 제약
 
-- 데몬(cysd)·CC(ui/src) 무변경. `"v":1` 유지. 기존 필드 의미 불변(`feedback_shared_field_semantic_contract`).
+- 데몬(gsdd)·CC(ui/src) 무변경. `"v":1` 유지. 기존 필드 의미 불변(`feedback_shared_field_semantic_contract`).
 - office3d: refitCam·fit 카메라 로직 수정 금지(56933bd Directive). embed 모드·타임라인 리플레이·기존 presence 애니 유지. sprite 텍스트 갱신 ≥1s 스로틀, per-frame 할당 금지.
-- 브리지: 순수 로직은 함수 분리 + stdlib unittest(`cysjavis-pack/tests/`). transcripts.db는 read-only(URI mode=ro)·실패 시 null(비용은 best-effort).
+- 브리지: 순수 로직은 함수 분리 + stdlib unittest(`gsdjavis-pack/tests/`). transcripts.db는 read-only(URI mode=ro)·실패 시 null(비용은 best-effort).

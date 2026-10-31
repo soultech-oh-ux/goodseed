@@ -9,7 +9,7 @@
 
 ★설계
   픽스처는 실물 13종의 **구조만** 축소 재현한다(수 KB). 실물 대조는 별도다 —
-  `python3 scripts/release-verify.py --version 0.14.19 --release-dir ~/cys-release-backup/v0.14.19-assets`.
+  `python3 scripts/release-verify.py --version 0.14.19 --release-dir ~/gsd-release-backup/v0.14.19-assets`.
   각 테스트는 정상 픽스처를 만든 뒤 **한 곳만** 망가뜨리고, 그 사유가 나오는지 본다.
   경로는 전부 tempfile — 개인 경로·실 홈 디렉터리 금지(시크릿 스캔 계약, test_verify_win_crt.py 관례).
 
@@ -46,13 +46,13 @@ BASE = "https://github.com/idoforgod/cys-terminal/releases/download/v%s/" % V
 # ★(0.14.53 WP12 · D6-b) 공개 본문·latest.json notes 가 실어야 하는 SAC 고지 — release.yml releaseBody 의 SAC 블록과
 #   같은 문면이다(그 일치는 test_51 이 release.yml 을 직접 읽어 잰다).
 SAC_BLOCK = (
-    "<!-- cys-win-sac: unsigned -->\n"
-    "**Windows 스마트 앱 컨트롤(SAC):** 이 판의 cys 설치 파일과 cys 실행파일은 코드 서명이 없습니다. "
+    "<!-- gsd-win-sac: unsigned -->\n"
+    "**Windows 스마트 앱 컨트롤(SAC):** 이 판의 gsd 설치 파일과 gsd 실행파일은 코드 서명이 없습니다. "
     "스마트 앱 컨트롤이 켜진 PC에서는 실행이 막힐 수 있으며, 이 판은 스마트 앱 컨트롤 적용 PC에서 검증하지 않았습니다.\n"
-    "**Windows Smart App Control:** this release's cys installer and cys executables are not code-signed. "
+    "**Windows Smart App Control:** this release's gsd installer and gsd executables are not code-signed. "
     "They may be blocked on PCs with Smart App Control on, and this release was not verified on a Smart App Control PC.\n"
 )
-BODY_OK = "cys 터미널 v%s. 설치 안내.\n\n%s" % (V, SAC_BLOCK)
+BODY_OK = "gsd 터미널 v%s. 설치 안내.\n\n%s" % (V, SAC_BLOCK)
 
 
 def _pe(magic=0x20B, nrva=16, security=(0, 0), e_lfanew=0x80, payload=b""):
@@ -114,24 +114,24 @@ def build_fixture(root):
         with open(os.path.join(root, name), "wb") as fh:
             fh.write(data)
 
-    w("cys_%s_aarch64.dmg" % V, _dmg_bytes(b"macos-arm-disk-image" * 16))
-    w("cys_%s_x64.dmg" % V, _dmg_bytes(b"macos-intel-disk-image" * 16))
-    w("cys_%s_x64-setup.exe" % V, exe_bytes)
-    w("cys_aarch64.app.tar.gz", gzip.compress(b"macos-arm-app-bundle" * 32))
-    w("cys_x64.app.tar.gz", gzip.compress(b"macos-intel-app-bundle" * 32))
-    w("pack.tar.gz", gzip.compress(b"cysjavis-pack-payload" * 32))
+    w("gsd_%s_aarch64.dmg" % V, _dmg_bytes(b"macos-arm-disk-image" * 16))
+    w("gsd_%s_x64.dmg" % V, _dmg_bytes(b"macos-intel-disk-image" * 16))
+    w("gsd_%s_x64-setup.exe" % V, exe_bytes)
+    w("gsd_aarch64.app.tar.gz", gzip.compress(b"macos-arm-app-bundle" * 32))
+    w("gsd_x64.app.tar.gz", gzip.compress(b"macos-intel-app-bundle" * 32))
+    w("pack.tar.gz", gzip.compress(b"gsdjavis-pack-payload" * 32))
     w("pack-manifest.json", json.dumps({"files": [], "expires_at": "2027-01-01T00:00:00Z"}).encode())
     w("pack-manifest.json.minisig",
       b"untrusted comment: minisign signature\nRWQfixture\n")
 
     # zip 은 setup.exe **한 개**만, 바이트 동일하게 품어야 한다.
-    with zipfile.ZipFile(os.path.join(root, "cys_%s_x64-setup.zip" % V), "w") as z:
-        z.writestr("cys_%s_x64-setup.exe" % V, exe_bytes)
+    with zipfile.ZipFile(os.path.join(root, "gsd_%s_x64-setup.zip" % V), "w") as z:
+        z.writestr("gsd_%s_x64-setup.exe" % V, exe_bytes)
 
     sigs = {
-        "cys_aarch64.app.tar.gz.sig": _sig_text("arm"),
-        "cys_x64.app.tar.gz.sig": _sig_text("intel"),
-        "cys_%s_x64-setup.exe.sig" % V: _sig_text("win"),
+        "gsd_aarch64.app.tar.gz.sig": _sig_text("arm"),
+        "gsd_x64.app.tar.gz.sig": _sig_text("intel"),
+        "gsd_%s_x64-setup.exe.sig" % V: _sig_text("win"),
     }
     for name, text in sigs.items():
         w(name, (text + "\n").encode())
@@ -142,7 +142,7 @@ def build_fixture(root):
         platforms[key] = {"signature": sigs[asset + ".sig"], "url": BASE + asset}
     w("latest.json", json.dumps({
         "version": V,
-        "notes": "cys %s — 릴리스 안내\n\n%s" % (V, SAC_BLOCK),
+        "notes": "gsd %s — 릴리스 안내\n\n%s" % (V, SAC_BLOCK),
         "pub_date": "2026-08-17T14:36:35Z",
         "platforms": platforms,
     }, ensure_ascii=False).encode())
@@ -191,7 +191,7 @@ class ReleaseVerifyTests(unittest.TestCase):
 
     # ── 1. 완전성(디렉터리 ↔ SUMS 양방향) ─────────────────────────────────
     def test_01_asset_missing_from_dir(self):
-        os.remove(self.p("cys_%s_x64.dmg" % V))
+        os.remove(self.p("gsd_%s_x64.dmg" % V))
         self.assert_fail("자산 누락")
 
     def test_02_unlisted_stowaway(self):
@@ -204,7 +204,7 @@ class ReleaseVerifyTests(unittest.TestCase):
 
     def test_04_asset_and_sums_row_both_removed(self):
         """대조만으로는 절대 못 잡는 케이스 — REQUIRED_ASSETS 하한선이 유일한 포획 지점."""
-        os.remove(self.p("cys_%s_aarch64.dmg" % V))
+        os.remove(self.p("gsd_%s_aarch64.dmg" % V))
         write_sums(self.root)
         self.assert_fail("배포 필수 자산 누락")
 
@@ -236,26 +236,26 @@ class ReleaseVerifyTests(unittest.TestCase):
     def test_09_version_token_mismatch(self):
         """구버전 자산이 섞여 든 묶음. ★REQUIRED_ASSETS 8종이 아닌 자산으로 찔러야
         3단계까지 도달한다 — 8종 중 하나면 2단계(배포 필수 자산 누락)가 먼저 잡는다."""
-        stale = "cys_0.14.18_x64-setup.exe.sig"
-        os.rename(self.p("cys_%s_x64-setup.exe.sig" % V), self.p(stale))
+        stale = "gsd_0.14.18_x64-setup.exe.sig"
+        os.rename(self.p("gsd_%s_x64-setup.exe.sig" % V), self.p(stale))
         write_sums(self.root)
         self.assert_fail("파일명 버전 토큰 불일치")
 
     def test_09b_required_asset_wins_over_token_check(self):
         """같은 사고라도 필수 8종이면 2단계가 먼저 잡는다 — 사유 순서를 못박는다."""
-        os.rename(self.p("cys_%s_x64.dmg" % V), self.p("cys_0.14.18_x64.dmg"))
+        os.rename(self.p("gsd_%s_x64.dmg" % V), self.p("gsd_0.14.18_x64.dmg"))
         write_sums(self.root)
         self.assert_fail("배포 필수 자산 누락")
 
     # ── 4. 컨테이너 지문(ASSET_SHAPES) ────────────────────────────────────
     #    ★SUMS 를 쓰레기에 맞춰 재생성해도 통과해선 안 된다.
     def test_10_zero_byte_asset(self):
-        open(self.p("cys_%s_aarch64.dmg" % V), "wb").close()
+        open(self.p("gsd_%s_aarch64.dmg" % V), "wb").close()
         write_sums(self.root)
         self.assert_fail("0바이트")
 
     def test_11_dmg_without_koly_trailer(self):
-        open(self.p("cys_%s_x64.dmg" % V), "wb").write(b"\x78\x01" + b"J" * 4096)
+        open(self.p("gsd_%s_x64.dmg" % V), "wb").write(b"\x78\x01" + b"J" * 4096)
         write_sums(self.root)
         self.assert_fail("koly")
 
@@ -266,18 +266,18 @@ class ReleaseVerifyTests(unittest.TestCase):
 
     def test_13_targz_truncated_midstream(self):
         """머리 매직은 멀쩡한데 중간에서 잘린 tar.gz — 끝까지 풀어야만 잡힌다."""
-        raw = open(self.p("cys_aarch64.app.tar.gz"), "rb").read()
-        open(self.p("cys_aarch64.app.tar.gz"), "wb").write(raw[: len(raw) // 2])
+        raw = open(self.p("gsd_aarch64.app.tar.gz"), "rb").read()
+        open(self.p("gsd_aarch64.app.tar.gz"), "wb").write(raw[: len(raw) // 2])
         write_sums(self.root)
         self.assert_fail("gzip 스트림이 끝까지 풀리지 않는다")
 
     def test_14_exe_not_pe(self):
-        open(self.p("cys_%s_x64-setup.exe" % V), "wb").write(b"#!/bin/sh\necho pwned\n")
+        open(self.p("gsd_%s_x64-setup.exe" % V), "wb").write(b"#!/bin/sh\necho pwned\n")
         write_sums(self.root)
         self.assert_fail("컨테이너 지문 불일치")
 
     def test_15_sig_not_base64(self):
-        open(self.p("cys_x64.app.tar.gz.sig"), "wb").write(b"!!! not base64 !!!")
+        open(self.p("gsd_x64.app.tar.gz.sig"), "wb").write(b"!!! not base64 !!!")
         latest = self.load_latest()
         for key in ("darwin-x86_64", "darwin-x86_64-app"):
             latest["platforms"][key]["signature"] = "!!! not base64 !!!"
@@ -292,20 +292,20 @@ class ReleaseVerifyTests(unittest.TestCase):
 
     def test_17_unknown_extension_rejected(self):
         """배포 구성이 몰래 늘어나는 걸 막는다 — 사람이 상수를 고쳐야 통과한다."""
-        open(self.p("cys_%s_x64.msi" % V), "wb").write(b"\xd0\xcf\x11\xe0msi")
+        open(self.p("gsd_%s_x64.msi" % V), "wb").write(b"\xd0\xcf\x11\xe0msi")
         write_sums(self.root)
         self.assert_fail("확장자 규칙에 없는 자산")
 
     # ── 5. Windows zip ↔ exe ──────────────────────────────────────────────
     def test_18_zip_holds_different_bytes(self):
-        with zipfile.ZipFile(self.p("cys_%s_x64-setup.zip" % V), "w") as z:
-            z.writestr("cys_%s_x64-setup.exe" % V, b"MZ\x90\x00different-installer")
+        with zipfile.ZipFile(self.p("gsd_%s_x64-setup.zip" % V), "w") as z:
+            z.writestr("gsd_%s_x64-setup.exe" % V, b"MZ\x90\x00different-installer")
         write_sums(self.root)
         self.assert_fail("바이트 동일하지 않다")
 
     def test_19_zip_holds_extra_member(self):
-        exe = "cys_%s_x64-setup.exe" % V
-        with zipfile.ZipFile(self.p("cys_%s_x64-setup.zip" % V), "w") as z:
+        exe = "gsd_%s_x64-setup.exe" % V
+        with zipfile.ZipFile(self.p("gsd_%s_x64-setup.zip" % V), "w") as z:
             z.writestr(exe, open(self.p(exe), "rb").read())
             z.writestr("README.txt", b"stowaway")
         write_sums(self.root)
@@ -332,8 +332,8 @@ class ReleaseVerifyTests(unittest.TestCase):
         macOS 업데이터 4종을 디렉터리·SUMS·latest.json 에서 통째로 지운다.
         = macOS 전 사용자의 앱 내 Update 가 죽은 묶음. 반드시 죽어야 한다.
         """
-        for name in ("cys_aarch64.app.tar.gz", "cys_aarch64.app.tar.gz.sig",
-                     "cys_x64.app.tar.gz", "cys_x64.app.tar.gz.sig"):
+        for name in ("gsd_aarch64.app.tar.gz", "gsd_aarch64.app.tar.gz.sig",
+                     "gsd_x64.app.tar.gz", "gsd_x64.app.tar.gz.sig"):
             os.remove(self.p(name))
         latest = self.load_latest()
         latest["platforms"] = {k: v for k, v in latest["platforms"].items()
@@ -348,7 +348,7 @@ class ReleaseVerifyTests(unittest.TestCase):
         6행 전부를 Windows 설치본으로 덮는다. = macOS 업데이터가 NSIS exe 를 받는 묶음.
         """
         latest = self.load_latest()
-        exe = "cys_%s_x64-setup.exe" % V
+        exe = "gsd_%s_x64-setup.exe" % V
         sig = open(self.p(exe + ".sig"), encoding="utf-8").read().strip()
         for key in latest["platforms"]:
             latest["platforms"][key] = {"signature": sig, "url": BASE + exe}
@@ -358,7 +358,7 @@ class ReleaseVerifyTests(unittest.TestCase):
 
     def test_24_single_row_repointed(self):
         latest = self.load_latest()
-        latest["platforms"]["darwin-aarch64"]["url"] = BASE + "cys_x64.app.tar.gz"
+        latest["platforms"]["darwin-aarch64"]["url"] = BASE + "gsd_x64.app.tar.gz"
         self.save_latest(latest)
         write_sums(self.root)
         self.assert_fail("url 결속 위반")
@@ -372,7 +372,7 @@ class ReleaseVerifyTests(unittest.TestCase):
 
     def test_26_updater_sig_file_removed_everywhere(self):
         """`.sig` 는 REQUIRED_ASSETS 밖 — latest.json 교차대조만이 유일한 포획 지점."""
-        os.remove(self.p("cys_aarch64.app.tar.gz.sig"))
+        os.remove(self.p("gsd_aarch64.app.tar.gz.sig"))
         write_sums(self.root)
         self.assert_fail("서명 파일이 없다")
 
@@ -423,9 +423,9 @@ class ReleaseVerifyTests(unittest.TestCase):
     # ── 8. Windows SAC 고지 ↔ 서명 상태 (0.14.53 WP12 · D6-b · 부서장 판정 0·4) ──────────
     def set_setup(self, data):
         """setup.exe 와 그것을 품은 zip 을 함께 바꾼다(6단계 바이트 동일성은 그대로 성립시킨다)."""
-        name = "cys_%s_x64-setup.exe" % V
+        name = "gsd_%s_x64-setup.exe" % V
         open(self.p(name), "wb").write(data)
-        with zipfile.ZipFile(self.p("cys_%s_x64-setup.zip" % V), "w") as z:
+        with zipfile.ZipFile(self.p("gsd_%s_x64-setup.zip" % V), "w") as z:
             z.writestr(name, data)
         write_sums(self.root)
 
@@ -436,20 +436,20 @@ class ReleaseVerifyTests(unittest.TestCase):
         write_sums(self.root)
 
     def test_40_body_without_sac_marker(self):
-        self.body = "cys 터미널 v%s. 설치 안내." % V
+        self.body = "gsd 터미널 v%s. 설치 안내." % V
         self.assert_fail("SAC 고지 마커")
 
     def test_41_body_with_two_markers(self):
-        self.body = BODY_OK + "\n<!-- cys-win-sac: unsigned -->\n"
+        self.body = BODY_OK + "\n<!-- gsd-win-sac: unsigned -->\n"
         self.assert_fail("SAC 마커가 2개")
 
     def test_42_body_signed_unverified_refused(self):
-        self.body = BODY_OK.replace("cys-win-sac: unsigned", "cys-win-sac: signed-unverified")
+        self.body = BODY_OK.replace("gsd-win-sac: unsigned", "gsd-win-sac: signed-unverified")
         self.assert_fail("허용되지 않는다")
 
     def test_43_body_signed_verified_refused_with_any_run_id(self):
-        for marker in ("cys-win-sac: signed-verified", "cys-win-sac: signed-verified run=123456789"):
-            self.body = BODY_OK.replace("cys-win-sac: unsigned", marker)
+        for marker in ("gsd-win-sac: signed-verified", "gsd-win-sac: signed-verified run=123456789"):
+            self.body = BODY_OK.replace("gsd-win-sac: unsigned", marker)
             self.assert_fail("signed-verified")
 
     def test_44_body_marker_without_each_key_phrase(self):
@@ -463,12 +463,12 @@ class ReleaseVerifyTests(unittest.TestCase):
         self.assert_fail("Authenticode 서명이 있다")
 
     def test_46_notes_without_marker(self):
-        self.set_notes("cys %s — 릴리스 안내" % V)
+        self.set_notes("gsd %s — 릴리스 안내" % V)
         self.assert_fail("latest.json notes 에 SAC 고지 마커")
 
     def test_47_notes_claiming_signed(self):
-        self.set_notes("cys %s\n\n%s" % (V, SAC_BLOCK.replace("cys-win-sac: unsigned",
-                                                                "cys-win-sac: signed-verified run=1")))
+        self.set_notes("gsd %s\n\n%s" % (V, SAC_BLOCK.replace("gsd-win-sac: unsigned",
+                                                                "gsd-win-sac: signed-verified run=1")))
         self.assert_fail("signed-verified")
 
     def test_48_malformed_pe_fails_closed(self):
@@ -568,7 +568,7 @@ class ExitCodeContractTests(unittest.TestCase):
     def test_exit_1_when_body_lacks_sac_line(self):
         with tempfile.TemporaryDirectory() as d:
             build_fixture(d)
-            r = self.run_cli("--version", V, "--release-dir", d, body="cys 안내만 있는 본문")
+            r = self.run_cli("--version", V, "--release-dir", d, body="gsd 안내만 있는 본문")
             self.assertEqual(r.returncode, 1)
             self.assertIn("windows-sac", r.stderr)
 

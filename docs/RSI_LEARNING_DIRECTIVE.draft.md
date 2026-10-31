@@ -1,7 +1,7 @@
 # RSI 학습 루프 — 절대지침 (5번째 directive · 초안)
 
-> ⚠ DRAFT — 오너 승인 전. 승인 시 `cysjavis-pack/directives/RSI_LEARNING_DIRECTIVE.md`로 이동 + `pack.rs` 배선.
-> 오너 2026-06-18 지시: 재귀적 자기개선을 cys-terminal 기본 기능으로 탑재.
+> ⚠ DRAFT — 오너 승인 전. 승인 시 `gsdjavis-pack/directives/RSI_LEARNING_DIRECTIVE.md`로 이동 + `pack.rs` 배선.
+> 오너 2026-06-18 지시: 재귀적 자기개선을 gsd-terminal 기본 기능으로 탑재.
 > "학습하라 / 공부하라 / 재귀적 자기개선하라" = 아래 5단계 루프를 의미한다.
 > launch-agent가 master·worker에 자동 주입. 상세 설계·검증=docs/RSI_LEARNING_DESIGN.md(리뷰어 2R ACCEPT).
 
@@ -46,7 +46,7 @@ master는 다음 신호에서 '학습이 필요하다'를 **자율 추천**한�
 
 ## 5. 도구
 
-`javis_learn {propose|search|extract|evaluate|store|harness|status}` (cysjavis-pack/bin/).
+`javis_learn {propose|search|extract|evaluate|store|harness|status}` (gsdjavis-pack/bin/).
 - ③평가 → `javis_rsi` 위임(producer≠evaluator·rollback) · ④저장 → `javis_memory` 위임(원자적·audit)
 - 강제자 = `rsi-gate.sh`(복구수단·격리실행 불변)
 - 가시화 = Control Center '학습' 탭(라운드·채택/rollback·발견 누적)
@@ -66,7 +66,7 @@ master는 다음 신호에서 '학습이 필요하다'를 **자율 추천**한�
 
 **집행 — 검증 계층 분리(R3 핵심)**:
 - **기계 검증은 결정론**(fetch 로그·quote substring·artifact 해시) — LLM "확인했다" 자기보고 불신.
-- **의미·논리 검증은 독립 모델 다양성**: 결정론으로 못 잡는 사실·논리·맥락은 **생산자와 다른 모델 패밀리**(cys=agy·codex 등)의 adversarial 검증 + ledger 박제. "자기보고 불신"=생산자 자기채점 불신이지 독립 모델 판단 배제 아님. 단일 모델 신뢰 금지.
+- **의미·논리 검증은 독립 모델 다양성**: 결정론으로 못 잡는 사실·논리·맥락은 **생산자와 다른 모델 패밀리**(gsd=agy·codex 등)의 adversarial 검증 + ledger 박제. "자기보고 불신"=생산자 자기채점 불신이지 독립 모델 판단 배제 아님. 단일 모델 신뢰 금지.
 - **공통모드 실패 차단**: 팩트체커는 생산자와 **다른 모델 패밀리 + 독립 source/query/tool**(같은 기반 LLM·API 인스턴스 공유 금지). **오프라인/폐쇄망 차선** = §2 실행안전의 로컬 모델 다변화 규격(시드 편차·양자화 분기)으로 격리(이종 API 불가 시 데드락 회피). ★**fallback 모드 confirmed 차단**(codex R3): 이 차선은 단일 모델 변형이라 공통모드 방어 약화 → fallback 검증물은 **provisional만·confirmed 승격 불가**(진짜 이종 모델 패밀리 가용 시에만 5차원 full recheck로 승격).
 - **검증 오버헤드 제어**(gemini R2): 매 검증 2+ 이종 모델 호출·교차대조의 비용/latency는 **5차원 게이트 단계별 단락(short-circuit)**으로 제어 — 결정론(기계) 검증을 먼저 돌려 실패 시 즉시 중단(고비용 이종 모델 호출 생략), 통과분만 의미·논리 독립 모델로 라우팅. 단 '**부분 통과 = 전체 중단**' 엄격가드는 불변(생산성 사유로 완화 금지).
 - **5차원 중 하나라도 미통과 시 학습 중단**(붕괴 방지 핵심 — 부분 통과 금지).

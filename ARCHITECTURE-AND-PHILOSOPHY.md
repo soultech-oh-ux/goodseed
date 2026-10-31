@@ -1,6 +1,6 @@
 # Architecture & Philosophy
 
-> cys-terminal + CYSJavis 팩이 **무엇을, 왜, 어떻게** 이렇게 만들었는지를 설명하는 문서입니다.
+> gsd-terminal + GSDJavis 팩이 **무엇을, 왜, 어떻게** 이렇게 만들었는지를 설명하는 문서입니다.
 > 설치·사용법은 [User Manual](USER-MANUAL.md), 첫인상은 [README](README.md)를 보세요.
 > 본문 주장의 근거는 저장소 소스 경로로 표기합니다. (v0.14.x 기준)
 
@@ -8,10 +8,10 @@
 
 ## 0. 한 문장 정의
 
-**cys-terminal은 "AI 에이전트 함대"를 하나의 회사처럼 굴리기 위한 터미널·데몬·관제탑이고,
-CYSJavis 팩은 그 회사의 취업규칙·운영도구·기억 골격이다.** 둘은 따로 설치하는 별개 제품이
+**gsd-terminal은 "AI 에이전트 함대"를 하나의 회사처럼 굴리기 위한 터미널·데몬·관제탑이고,
+GSDJavis 팩은 그 회사의 취업규칙·운영도구·기억 골격이다.** 둘은 따로 설치하는 별개 제품이
 아니라, 하나의 저장소에서 함께 빌드·서명·배포되어 **한 몸으로 동작**한다
-(`cysjavis-pack/README.md`: "터미널의 기계 기능과 역할별 절대지침 문서가 한 몸으로 동작한다").
+(`gsdjavis-pack/README.md`: "터미널의 기계 기능과 역할별 절대지침 문서가 한 몸으로 동작한다").
 
 > 이 저장소의 코드 대부분은 **사람의 지휘 아래 AI 에이전트들이 작성**했다.
 > 커밋 로그의 `Co-Authored-By` 체인이 그 기록이며, 이 저장소 자체가
@@ -30,20 +30,20 @@ CYSJavis 팩은 그 회사의 취업규칙·운영도구·기억 골격이다.**
    (401), 시스템이 hang 된다. 누구도 정리 책임을 지지 않는다.
 3. **관측의 벽** — 누가 얼마나 쓰는지(토큰·비용·컨텍스트), 지금 무엇을 하는지 보이지 않는다.
 
-cys-terminal은 이 세 가지를 **1급 기능**으로 해결하기 위해 처음부터 새로 작성한 독자
-구현이다. 그리고 네 번째 벽 — **"에이전트를 어떻게 조직으로 묶을 것인가"** — 를 CYSJavis
+gsd-terminal은 이 세 가지를 **1급 기능**으로 해결하기 위해 처음부터 새로 작성한 독자
+구현이다. 그리고 네 번째 벽 — **"에이전트를 어떻게 조직으로 묶을 것인가"** — 를 GSDJavis
 팩(역할별 절대지침 + 결정론 운영 도구)으로 해결한다.
 
 ---
 
 ## 2. 3층 구조 — 코어 / 팩 / 개인 층
 
-시스템 전체는 세 층으로 분리된다 (`cysjavis-pack/README.md` §3층 구조).
+시스템 전체는 세 층으로 분리된다 (`gsdjavis-pack/README.md` §3층 구조).
 
 | 층 | 내용 | 출처 |
 |---|---|---|
-| **코어 (기계 기능)** | 양방향 소켓·승인 Feed·watchdog/프로세스 원장·이벤트 push·세션 영속·서명 검증 | cys-terminal 바이너리 (`src/`) |
-| **CYSJavis 팩 (운영체계)** | 역할별 절대지침·결정론 운영 도구·훅·스킬·어댑터 | `cys init-pack` (`cysjavis-pack/`) |
+| **코어 (기계 기능)** | 양방향 소켓·승인 Feed·watchdog/프로세스 원장·이벤트 push·세션 영속·서명 검증 | gsd-terminal 바이너리 (`src/`) |
+| **GSDJavis 팩 (운영체계)** | 역할별 절대지침·결정론 운영 도구·훅·스킬·어댑터 | `gsd init-pack` (`gsdjavis-pack/`) |
 | **개인 층** | soul.md(우선순위·금지선)·장기기억(memory/)·프로젝트 컨텍스트 | **사용자가 사용하며 축적** |
 
 세 번째 층이 핵심 설계 결정이다. 배포되는 `soul.md`와 `memory/`는 **의도적으로 비어 있는
@@ -51,9 +51,9 @@ cys-terminal은 이 세 가지를 **1급 기능**으로 해결하기 위해 처�
 
 > "이 파일은 의도적으로 비어 있는 골격이다. 시스템을 사용하면서 **당신의** 우선순위·취향·
 > 금지선을 직접 채워라. 절대지침(directives/)이 '어떻게 일하는가'라면, soul은 '누구를 위해
-> 왜 일하는가'다." — `cysjavis-pack/soul.md`
+> 왜 일하는가'다." — `gsdjavis-pack/soul.md`
 >
-> "장기기억은 빌리는 것이 아니라 사용하며 축적하는 것이다." — `cysjavis-pack/memory/MEMORY.md`
+> "장기기억은 빌리는 것이 아니라 사용하며 축적하는 것이다." — `gsdjavis-pack/memory/MEMORY.md`
 
 작동 방식(디렉티브)과 능력(도구·스킬)은 완비해서 배포하되, 가치관과 기억은 소유자의 것으로
 남긴다. 팩 설치기는 이 원칙을 코드로 강제한다 — soul.md·디렉티브·CLAUDE.md·schedule.json은
@@ -106,14 +106,14 @@ cys-terminal은 이 세 가지를 **1급 기능**으로 해결하기 위해 처�
 ### ⑥ fail-closed와 fail-open의 의도적 비대칭
 모든 게이트가 같은 방향으로 실패하지 않는다. **보안·서명·능력 게이트는 fail-closed**
 (팩 서명 검증 `src/packsig.rs`, capability 게이트, RSI 봉쇄), **관측·텔레메트리 훅은
-fail-open**(항상 exit 0 — 관측이 에이전트를 깨뜨리면 안 된다, `hooks/cys-hook.sh`),
+fail-open**(항상 exit 0 — 관측이 에이전트를 깨뜨리면 안 된다, `hooks/gsd-hook.sh`),
 **통신 정책(ACL) 부재는 fail-open**(설정 파일이 없다고 함대가 벙어리가 되면 안 된다).
 어느 쪽으로 실패할지는 각 게이트의 목적에 따라 선택된 설계 결정이며 코드 주석에 명시된다.
 
 ### ⑦ 로컬 우선 — 데이터는 머신을 떠나지 않는다
 관제 데이터(사용량·비용·세션·전사)는 전부 로컬 SQLite(`analytics.db`·`transcripts.db`)에
 쌓이고, 데몬은 **네트워크 리스너가 없다**(사용자 소유 Unix 소켓 / DACL 봉인 named pipe만).
-외부 대시보드·클라우드 의존 0. PII는 `CYS_CONTROL_REDACT=1`로 가린 채 집계만 보존할 수 있다.
+외부 대시보드·클라우드 의존 0. PII는 `GSD_CONTROL_REDACT=1`로 가린 채 집계만 보존할 수 있다.
 
 ### ⑧ 판단과 구현의 분리 — 빠른 사고 / 느린 사고
 master는 판단(분해·브리프·검증·승인)에 집중하고 구현 노동은 워커에게 위임한다. 간단한
@@ -138,13 +138,13 @@ master는 판단(분해·브리프·검증·승인)에 집중하고 구현 노�
 이 자율주행 권한은 오너가 soul.md에 명시적으로 부여할 때만 발생하며("이 절이 없으면
 master는 자율주행하지 않는다"), 자율화되는 것은 '전환을 누가 누르냐'뿐 — **품질 게이트의
 엄격성은 불변**이다. 집행은 산문이 아니라 PreToolUse 훅(`hooks/guard.sh`, deny-by-default
-allowlist·fail-closed)과 데몬 kill-switch(`cys pause` — 큐 배달·스케줄 발화 동결)가 맡는다.
+allowlist·fail-closed)과 데몬 kill-switch(`gsd pause` — 큐 배달·스케줄 발화 동결)가 맡는다.
 
 ---
 
 ## 4. 역할 체계 — 에이전트를 회사로 묶는 법
 
-CYSJavis 팩은 에이전트를 다섯 역할로 조직한다. 각 역할은 기동 시 절대지침
+GSDJavis 팩은 에이전트를 다섯 역할로 조직한다. 각 역할은 기동 시 절대지침
 (`directives/*.md`)을 자동 주입받아 "각성"한다 — 지침 없는 노드는 단순 단말로 수렴한다는
 것이 반복 관찰된 실패 양식이기 때문이다.
 
@@ -164,7 +164,7 @@ CYSJavis 팩은 에이전트를 다섯 역할로 조직한다. 각 역할은 기
 - 데몬은 **커널 peer pid**로 발신자를 검증하고(자기신고 role 불신), `acl.json`의
   role→role 정책으로 stdin 주입을 게이트한다 — 예: 리뷰어는 워커를 직접 조향할 수 없다
   (중재는 master 경유).
-- 능력 모델(`src/bin/cysd/caps.rs`)은 deny-by-default — reviewer/planner는 읽기·검색만.
+- 능력 모델(`src/bin/gsdd/caps.rs`)은 deny-by-default — reviewer/planner는 읽기·검색만.
   에이전트 내부 도구는 PreToolUse 훅(`hooks/role-capability-gate.sh`)이 실 집행자다
   (리뷰어가 검토 대상을 직접 고쳐버리는 reward-hack 차단).
 - master 특권 탈취(라이브 master role claim), 워커 무한 증식(active-limit), 승인 자기결재
@@ -179,27 +179,27 @@ CYSJavis 팩은 에이전트를 다섯 역할로 조직한다. 각 역할은 기
 ```
 ┌─────────────────────────────── 한 저장소, 한 배포 ───────────────────────────────┐
 │                                                                                │
-│  cys.app   Tauri 2 데스크톱 앱 — 터미널 UI(xterm.js) + Control Center.          │
+│  gsd.app   Tauri 2 데스크톱 앱 — 터미널 UI(xterm.js) + Control Center.          │
 │            데몬의 thin client. PTY를 소유하지 않으므로 앱이 죽어도 세션 생존.       │
 │                                                                                │
-│  cysd      헤드리스 코어 데몬 — NDJSON 소켓 서버(UDS / named pipe), PTY 소유      │
+│  gsdd      헤드리스 코어 데몬 — NDJSON 소켓 서버(UDS / named pipe), PTY 소유      │
 │            (portable-pty: openpty·ConPTY), vt100 화면 재구성, 이벤트 버스,        │
 │            watchdog·프로세스 원장, 사용량/비용 수집, SQLite 영속 분석, 스케줄러     │
 │                                                                                │
-│  cys       CLI — pane 안의 AI가 쓰는 동등 노드 클라이언트 (60+ 서브커맨드)          │
+│  gsd       CLI — pane 안의 AI가 쓰는 동등 노드 클라이언트 (60+ 서브커맨드)          │
 │                                                                                │
-│  pack      cysjavis-pack/ — 절대지침 10·결정론 도구 86·훅 31·스킬 114·스키마 4.   │
+│  pack      gsdjavis-pack/ — 절대지침 10·결정론 도구 86·훅 31·스킬 114·스키마 4.   │
 │            빌드 시 바이너리에 임베드, 배포 시 minisign 서명                        │
 └────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-모든 pane 프로세스에 `CYS_SURFACE_ID`·`CYS_SURFACE_REF`·`CYS_SOCKET`이 자동 주입된다 —
-pane 안의 AI는 `cys identify` 한 번으로 자기 주소를 알고, 그 순간부터 소켓의 **동등
+모든 pane 프로세스에 `GSD_SURFACE_ID`·`GSD_SURFACE_REF`·`GSD_SOCKET`이 자동 주입된다 —
+pane 안의 AI는 `gsd identify` 한 번으로 자기 주소를 알고, 그 순간부터 소켓의 **동등
 노드**다. "사람만 조종석에 앉는 터미널"과의 근본적 차이가 여기다.
 
-### 5.2 cysd 데몬 내부
+### 5.2 gsdd 데몬 내부
 
-| 모듈 (`src/bin/cysd/`) | 역할 |
+| 모듈 (`src/bin/gsdd/`) | 역할 |
 |---|---|
 | `main.rs` | 진입점·accept loop·연결 핸들러·프레이밍·startup lock·자동 복원 |
 | `handlers.rs` | RPC 디스패치(60+ 메서드)·발신자 신원 해소·ACL·능력 게이트 |
@@ -313,11 +313,11 @@ pro 콘텐츠를 내장 free 팩으로 덮지 않도록 보호된다(강등은 �
 3. **능력 게이트** — deny-by-default. 알 수 없는 역할은 능력 0.
 4. **승인은 사람 또는 서명** — 화면의 승인 프롬프트에 자동 응답하는 코드는 없다(HITL).
    반복 위험 명령은 master가 HMAC-SHA256 signed-prefix로 1회 서명하면 guard 훅이 통과시킨다
-   (`cys approval sign` — master surface 전용, 상수시간 비교, 시크릿 0600 파일).
+   (`gsd approval sign` — master surface 전용, 상수시간 비교, 시크릿 0600 파일).
 5. **자기결재 차단** — 승인 요청을 올린 노드가 스스로 승인할 수 없다(pid/pgid/surface 각인).
 6. **공급망** — 앱은 Tauri updater 서명, 팩은 minisign 핀. 발행 전 비밀/PII 게이트
    (`scripts/secret-scan.sh --all`, fail-closed)와 팩 전용 스캔이 CI 최우선 단계로 돈다.
-7. **PII** — `CYS_CONTROL_REDACT=1`이면 세션 식별자를 해시로 가리고 집계만 보존.
+7. **PII** — `GSD_CONTROL_REDACT=1`이면 세션 식별자를 해시로 가리고 집계만 보존.
 
 **정직한 한계의 명문화**도 설계의 일부다: 단일-UID 모델에서 승인 서명·자기결재 정책은
 "암호학적 보증"이 아니라 탐지·fail-safe 층임을 코드 주석이 스스로 밝힌다. 비밀 스캐너는
@@ -332,13 +332,13 @@ pro 콘텐츠를 내장 free 팩으로 덮지 않도록 보호된다(강등은 �
 - **이벤트 연속성** — seq 단조 + 재시작 간 예약 블록으로, 재접속 클라이언트가 이어받는다.
 - **기록 영속** — 3개의 로컬 SQLite(analytics / transcripts+FTS / channels), 전부 WAL,
   열기 실패 시 기능 저하로 우아하게 계속(관측이 본체를 죽이지 않는다).
-- **변조 증거성** — 전사 기록은 해시체인으로 이어지고, `cys attest pin/verify`로 외부
+- **변조 증거성** — 전사 기록은 해시체인으로 이어지고, `gsd attest pin/verify`로 외부
   보관·사후 대조가 된다(producer≠evaluator의 기록 버전).
 - **부활(phoenix)** — 상태 스냅샷은 세대 보관되고(`javis_state_snapshot`), 복원은 부활
   저널 상태머신(`javis_phoenix`)이 수행한다. 복원 상태는 VERIFIED/UNVERIFIED/FAILED 정직
   enum으로 보고된다 — "무출력=성공" 해석은 금지되어 있다. 크래시 루프에는 회로차단기가
   걸린다. 복원 시 재주입되는 텍스트는 메모리 포이즌 스캔을 거친다(`hooks/inject_gate.py`).
-- **역할 조직 복원** — `cys restore`가 토폴로지 스냅샷의 죽은 역할들을 일괄 재기동·지침
+- **역할 조직 복원** — `gsd restore`가 토폴로지 스냅샷의 죽은 역할들을 일괄 재기동·지침
   재주입한다. 묘비(tombstone) 규약이 "사용자가 의도적으로 닫은 것"과 "죽어서 부활해야
   하는 것"을 구분한다.
 
@@ -355,7 +355,7 @@ pro 콘텐츠를 내장 free 팩으로 덮지 않도록 보호된다(강등은 �
 3. **게이트** — `rsi-gate.sh`(fail-closed) + 디렉티브 회귀 트립와이어
    (`javis_directive_bench.py` — 지침이 결함 행동을 실제로 금지하는지 결정론 채점).
 4. **가시화** — Control Center "학습" 탭에서 라운드 타임라인·채택/롤백·발견 누적을 본다.
-5. **영속** — 통과한 것만 스킬(`cys skill`)·장기기억(`javis_memory`)·결정기록(`javis_adr`)
+5. **영속** — 통과한 것만 스킬(`gsd skill`)·장기기억(`javis_memory`)·결정기록(`javis_adr`)
    으로 증류된다. "넘어진 사람이 팻말을 세운다" — 실패 경험이 스킬 주의칸으로 쌓인다.
 
 ---

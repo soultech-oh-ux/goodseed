@@ -4,23 +4,23 @@ members = ["src-tauri"]
 exclude = ["vendor/portable-pty"]
 
 [package]
-name = "cys-terminal"
-version = "0.1.0"
+name = "gsd-terminal"
+version = "0.1.1"
 edition = "2021"
-description = "cys — the CYSJavis terminal: bidirectional socket IPC, multi-agent OS (CYSJavis Pack), governance, heartbeat"
+description = "gsd — the GSDJavis terminal: bidirectional socket IPC, multi-agent OS (GSDJavis Pack), governance, heartbeat"
 license = "MIT"
 
 [lib]
-name = "cys"
+name = "gsd"
 path = "src/lib.rs"
 
 [[bin]]
-name = "cysd"
-path = "src/bin/cysd/main.rs"
+name = "gsdd"
+path = "src/bin/gsdd/main.rs"
 
 [[bin]]
-name = "cys"
-path = "src/bin/cys.rs"
+name = "gsd"
+path = "src/bin/gsd.rs"
 
 [dependencies]
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "signal", "process"] }

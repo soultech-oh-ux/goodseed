@@ -26,19 +26,19 @@ seed-once는 "지금 존재하는 파일"을 보호한다. **구버전에서 이
    확인한다 — 원복(healed) 파일 목록이 나온다.
 2. 상태 파일별로 라이브 본과 `.user` 병치본을 비교한다:
    ```bash
-   diff ~/.cys/pack/memory/MEMORY.md      ~/.cys/pack/memory/MEMORY.md.user
-   diff ~/.cys/pack/round/SESSION_STATE.md ~/.cys/pack/round/SESSION_STATE.md.user
-   diff ~/.cys/pack/round/RECOVERY.md      ~/.cys/pack/round/RECOVERY.md.user
+   diff ~/.gsd/pack/memory/MEMORY.md      ~/.gsd/pack/memory/MEMORY.md.user
+   diff ~/.gsd/pack/round/SESSION_STATE.md ~/.gsd/pack/round/SESSION_STATE.md.user
+   diff ~/.gsd/pack/round/RECOVERY.md      ~/.gsd/pack/round/RECOVERY.md.user
    ```
 3. 라이브 본이 아직 vendor 골격(사실상 빈 껍데기)이면 `.user`를 그대로 복원하고,
    원복 후 새로 쌓인 내용이 있으면 두 본을 **병합**한다(둘 다 보존이 원칙 —
    MEMORY.md는 색인이므로 양쪽 포인터의 합집합).
    ```bash
-   cp ~/.cys/pack/memory/MEMORY.md.user ~/.cys/pack/memory/MEMORY.md   # 골격일 때만
+   cp ~/.gsd/pack/memory/MEMORY.md.user ~/.gsd/pack/memory/MEMORY.md   # 골격일 때만
    ```
-4. `cys pack-merge`로 원장 항목을 해소한다(해소 전까지 C62 WARN은 의도적으로 남는다).
+4. `gsd pack-merge`로 원장 항목을 해소한다(해소 전까지 C62 WARN은 의도적으로 남는다).
 5. 복원 후에는 seed-once 보호로 다시 원복되지 않는다 — 재발 확인:
-   `python3 ~/.cys/pack/bin/javis_preflight.py --json | grep C62`.
+   `python3 ~/.gsd/pack/bin/javis_preflight.py --json | grep C62`.
 
 ## Windows 사용자 특이사항 (이 계열 최다 발생 플랫폼)
 
@@ -59,6 +59,6 @@ Windows의 상태·기억 원복도 이 릴리스로 봉인된다(회귀 핀: pa
 
 `bin/*.py`는 여전히 system 등급이다(배포 무결성 anti-skew — 의도된 설계). 라이브에서
 고친 코드가 `.user`로 병치돼 있다면 그 수정은 로컬에서 영속시킬 수 없다 —
-**소스 레포(cysjavis-pack)로 승격 제보**하는 것이 유일한 영속 경로다. 이번 릴리스에는
+**소스 레포(gsdjavis-pack)로 승격 제보**하는 것이 유일한 영속 경로다. 이번 릴리스에는
 그렇게 소실됐던 승인 수정분(javis_resource_gate 동적 임계·codex 이중계수 제외,
 inject-context 부서 분기, RSI 추천 제목)이 이미 흡수돼 있다.

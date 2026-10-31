@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::Path;
 
-// build.rs 자동 생성 키링(tauri.conf.json pubkey + cysjavis-pack/trusted-keys.json 병합).
+// build.rs 자동 생성 키링(tauri.conf.json pubkey + gsdjavis-pack/trusted-keys.json 병합).
 include!(concat!(env!("OUT_DIR"), "/pack_keyring.rs"));
 
 /// 신뢰 키링 엔트리. `not_after`(RFC3339)는 ★전 서명키 필수(만료 없는 영구키 = fail-closed 위반).
@@ -93,7 +93,7 @@ struct AcceptedPack {
     pro_revision: u32,
 }
 
-/// embed 키링(TRUSTED_KEYS_JSON) 파싱 — 프로덕션 검증 경로(verify_manifest)와 P4 `cys pack-update`가
+/// embed 키링(TRUSTED_KEYS_JSON) 파싱 — 프로덕션 검증 경로(verify_manifest)와 P4 `gsd pack-update`가
 /// 동일 신뢰근원을 공유한다(키 SOT 단일화). build.rs 병합 실패 시 Err.
 pub fn embedded_keyring() -> Result<Keyring, String> {
     serde_json::from_str(TRUSTED_KEYS_JSON).map_err(|e| format!("embed 키링 파싱 실패: {e}"))
@@ -420,7 +420,7 @@ mod tests {
 
     fn tmp_accepted(tag: &str) -> std::path::PathBuf {
         std::env::temp_dir().join(format!(
-            "cys-packsig-{tag}-{}-accepted.json",
+            "gsd-packsig-{tag}-{}-accepted.json",
             std::process::id()
         ))
     }
@@ -638,7 +638,7 @@ mod tests {
     #[test]
     fn verify_files_match_and_mismatch() {
         use sha2::{Digest, Sha256};
-        let root = std::env::temp_dir().join(format!("cys-packsig-files-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("gsd-packsig-files-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(root.join("sub")).unwrap();
         std::fs::write(root.join("sub/a.txt"), b"hello").unwrap();
@@ -678,7 +678,7 @@ mod tests {
     #[test]
     fn verify_no_extra_files_rejects_unlisted() {
         let root =
-            std::env::temp_dir().join(format!("cys-packsig-extra-{}", std::process::id()));
+            std::env::temp_dir().join(format!("gsd-packsig-extra-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(root.join("bin")).unwrap();
         std::fs::write(root.join("soul.md"), b"S").unwrap();
@@ -938,7 +938,7 @@ mod tests {
     fn verify_no_extra_files_rejects_symlink() {
         use sha2::{Digest, Sha256};
         use std::os::unix::fs::symlink;
-        let root = std::env::temp_dir().join(format!("cys-vnef-sym-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("gsd-vnef-sym-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(root.join("a.txt"), b"A").unwrap();

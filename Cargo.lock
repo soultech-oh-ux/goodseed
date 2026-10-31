@@ -783,50 +783,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52560adf09603e58c9a7ee1fe1dcb95a16927b17c127f0ac02d6e768a0e25bc1"
 
 [[package]]
-name = "cys-app"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "cys-terminal",
- "libc",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-notification",
- "tauri-plugin-process",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "tokio",
-]
-
-[[package]]
-name = "cys-terminal"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "clap",
- "dirs",
- "flate2",
- "libc",
- "minisign",
- "minisign-verify",
- "portable-pty",
- "regex",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2",
- "strip-ansi-escapes",
- "sysinfo",
- "tar",
- "tokio",
- "vt100",
- "windows-sys 0.59.0",
-]
-
-[[package]]
 name = "darling"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1617,6 +1573,50 @@ dependencies = [
  "glib-sys",
  "libc",
  "system-deps",
+]
+
+[[package]]
+name = "gsd-app"
+version = "0.1.1"
+dependencies = [
+ "base64 0.22.1",
+ "gsd-terminal",
+ "libc",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-notification",
+ "tauri-plugin-process",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "tokio",
+]
+
+[[package]]
+name = "gsd-terminal"
+version = "0.1.1"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "clap",
+ "dirs",
+ "flate2",
+ "libc",
+ "minisign",
+ "minisign-verify",
+ "portable-pty",
+ "regex",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "strip-ansi-escapes",
+ "sysinfo",
+ "tar",
+ "tokio",
+ "vt100",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

@@ -29,4 +29,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo check --bin cys --bin cysd
+      - run: cargo check --bin gsd --bin gsdd
+
+      - run: cargo test --lib workspace::tests
+  updater:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/test_update_goodseed.py

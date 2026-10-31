@@ -4,11 +4,11 @@ surface.list/org.status 노출·이벤트 발화를 실측 검증한다 (20/20 P
 
 실행법 (재접속 시):
   1) cargo build --bins                          # 신 바이너리 보장 (cargo test는 바이너리 갱신 안 함)
-  2) export CYS_E2E_SOCK=/tmp/cys-e2e-$$.sock
-  3) CYS_SOCKET=$CYS_E2E_SOCK CYS_PACK_DIR=/tmp/cys-e2e-pack CYS_USAGE_POLL_SECS=1 \
-       ./target/debug/cysd > /tmp/cys-e2e.log 2>&1 &
+  2) export GSD_E2E_SOCK=/tmp/gsd-e2e-$$.sock
+  3) GSD_SOCKET=$GSD_E2E_SOCK GSD_PACK_DIR=/tmp/gsd-e2e-pack GSD_USAGE_POLL_SECS=1 \
+       ./target/debug/gsdd > /tmp/gsd-e2e.log 2>&1 &
   4) python3 docs/usage_e2e.py
-  5) pgrep -f "$CYS_E2E_SOCK" | xargs kill        # 샌드박스 데몬 정리"""
+  5) pgrep -f "$GSD_E2E_SOCK" | xargs kill        # 샌드박스 데몬 정리"""
 import json
 import os
 import socket
@@ -16,10 +16,10 @@ import subprocess
 import sys
 import time
 
-SOCK = os.environ.get("CYS_E2E_SOCK", "/tmp/cys-e2e-usage-r3.sock")
-ROOT = "/Users/user/Desktop/CYSjavis/cys-terminal"
-CLAUDE_TX = "/tmp/cys-e2e-claude.jsonl"
-CODEX_TX = "/tmp/cys-e2e-rollout.jsonl"
+SOCK = os.environ.get("GSD_E2E_SOCK", "/tmp/gsd-e2e-usage-r3.sock")
+ROOT = "/Users/user/Desktop/GSDjavis/gsd-terminal"
+CLAUDE_TX = "/tmp/gsd-e2e-claude.jsonl"
+CODEX_TX = "/tmp/gsd-e2e-rollout.jsonl"
 
 FAIL = []
 

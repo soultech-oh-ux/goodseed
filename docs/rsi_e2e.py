@@ -16,7 +16,7 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RSI = os.path.join(ROOT, "cysjavis-pack", "bin", "javis_rsi.py")
+RSI = os.path.join(ROOT, "gsdjavis-pack", "bin", "javis_rsi.py")
 FAIL = []
 
 
@@ -38,7 +38,7 @@ def git(args, cwd):
 
 
 def run_rsi(args, cwd):
-    env = dict(os.environ, CYS_ROUND_DIR=os.path.join(cwd, "_round"))
+    env = dict(os.environ, GSD_ROUND_DIR=os.path.join(cwd, "_round"))
     return subprocess.run([sys.executable, RSI] + args, cwd=cwd, capture_output=True, text=True, env=env)
 
 
@@ -55,7 +55,7 @@ def main():
     check("rollback_plan 더티+비조상 blockers 2", len(plan2["blockers"]) == 2 and plan2["safe"] is False, str(plan2))
 
     # ── git 흐름 (격리 repo) ──
-    with tempfile.TemporaryDirectory(prefix="cys-rsi-") as d:
+    with tempfile.TemporaryDirectory(prefix="gsd-rsi-") as d:
         git(["init", "-q"], d)
         git(["config", "user.email", "t@t"], d)
         git(["config", "user.name", "t"], d)

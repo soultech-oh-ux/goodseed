@@ -15,10 +15,10 @@
     1) `release/assets-policy.json` 이 main·v0.14.19 **양쪽에 없다**(체리픽에서 누락)
        → `rendered_policy()` 가 시작하자마자 FileNotFoundError.
     2) 정책을 실제 14종에 맞춰 합성해 줘도 → `release verification failed: latest.json notes mismatch`.
-       옛 판본은 notes 를 `f"cys {version}"` 로 못박았는데 실물은 한국어 안내 문장이다.
+       옛 판본은 notes 를 `f"gsd {version}"` 로 못박았는데 실물은 한국어 안내 문장이다.
     3) 그 뒤로도 platforms 집합이 어긋난다 — 옛 판본은 3종만 허용하나 실물은 6종
-       (`-app`·`-nsis` 별칭 추가). 업데이터 자산명도 옛 판본은 `cys_<V>_aarch64.app.tar.gz`
-       를 가정하나 실물은 **버전 토큰이 없는** `cys_aarch64.app.tar.gz` 다 →
+       (`-app`·`-nsis` 별칭 추가). 업데이터 자산명도 옛 판본은 `gsd_<V>_aarch64.app.tar.gz`
+       를 가정하나 실물은 **버전 토큰이 없는** `gsd_aarch64.app.tar.gz` 다 →
        `files[...]` KeyError 가 except 튜플에 없어 사유 없는 트레이스백으로 죽는다
        (비영 종료라 fail-closed 이긴 하나 "명확한 사유 출력" 계약 위반).
   즉 옛 판본은 v0.14.19 의 자산 계약과 어긋난다. 그래서 **검증 강도는 그대로 물려받고**
@@ -74,7 +74,7 @@
   python3 scripts/release-verify.py --version 0.14.55 --release-dir reviewed-release --body-file body.txt --print-assets
 
 ★8단계 Windows SAC 고지(D6-b · 0.14.53): setup.exe 의 PE 보안 디렉터리(Authenticode)가 없어야 하고, 본문과 latest.json
-  notes 가 각각 `<!-- cys-win-sac: unsigned -->` 마커 정확히 하나와 SAC_KEY_PHRASES 두 문구를 실어야 한다. 서명된
+  notes 가 각각 `<!-- gsd-win-sac: unsigned -->` 마커 정확히 하나와 SAC_KEY_PHRASES 두 문구를 실어야 한다. 서명된
   설치 파일 · signed-* 마커 · 마커 0/2개 · 깨진 PE 헤더는 전부 실패다(서명이 잠든 판 — 부서장 판정 0·4).
 
 종료코드: 0=통과, 1=검증 실패, 2=인자 오류
@@ -97,19 +97,19 @@ VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 # `<64자 소문자 hex><공백 2칸><파일명>` — shasum -a 256 의 기본 출력 형식.
 # 파일명 문자셋을 좁게 못박아 경로 탈출(`../`)·공백 트릭을 원천 차단한다.
 ROW_RE = re.compile(r"^([0-9a-f]{64})  ([A-Za-z0-9_.-]+)$")
-# 파일명에 박힌 버전 토큰(X.Y.Z)을 뽑는다. `cys_aarch64.app.tar.gz` 처럼 토큰이 없는 이름도
+# 파일명에 박힌 버전 토큰(X.Y.Z)을 뽑는다. `gsd_aarch64.app.tar.gz` 처럼 토큰이 없는 이름도
 # 정상이므로(업데이터 자산은 버전을 안 달고 나온다) "있으면 일치해야 한다"로 다룬다.
 TOKEN_RE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")
 
 # ★SUMS 와 무관한 독립 하한선 ① — 이게 없으면 "빌드 자체가 안 돼 SUMS 에도 안 실린 자산"을 못 잡는다.
 #   `{v}` 는 --version 으로 채운다. 여기 없는 5종은 아래 `UPDATER_PLATFORMS` 가 강제한다.
 REQUIRED_ASSETS = (
-    "cys_{v}_aarch64.dmg",        # macOS Apple Silicon 다운로드 버튼
-    "cys_{v}_x64.dmg",            # macOS Intel 다운로드 버튼
-    "cys_{v}_x64-setup.exe",      # Windows 다운로드 버튼
-    "cys_{v}_x64-setup.zip",      # .exe 직다운이 막힌 환경용 4번째 버튼
+    "gsd_{v}_aarch64.dmg",        # macOS Apple Silicon 다운로드 버튼
+    "gsd_{v}_x64.dmg",            # macOS Intel 다운로드 버튼
+    "gsd_{v}_x64-setup.exe",      # Windows 다운로드 버튼
+    "gsd_{v}_x64-setup.zip",      # .exe 직다운이 막힌 환경용 4번째 버튼
     "latest.json",                # 앱 내 Update 버튼(업데이터)의 정본
-    "pack.tar.gz",                # cysjavis 팩 본체
+    "pack.tar.gz",                # gsdjavis 팩 본체
     "pack-manifest.json",         # 팩 매니페스트
     "pack-manifest.json.minisig", # 팩 매니페스트 minisign 서명
 )
@@ -123,12 +123,12 @@ REQUIRED_ASSETS = (
 #   불일치 0. (v0.13.23 은 3키 시절이라 대상 밖 — `-app`·`-nsis` 는 tauri v2 업데이터의
 #   별칭 키이고, 옛 판본이 3키로 못박았다가 깨진 지점이 바로 여기다.)
 UPDATER_PLATFORMS = {
-    "darwin-aarch64":      "cys_aarch64.app.tar.gz",
-    "darwin-aarch64-app":  "cys_aarch64.app.tar.gz",
-    "darwin-x86_64":       "cys_x64.app.tar.gz",
-    "darwin-x86_64-app":   "cys_x64.app.tar.gz",
-    "windows-x86_64":      "cys_{v}_x64-setup.exe",
-    "windows-x86_64-nsis": "cys_{v}_x64-setup.exe",
+    "darwin-aarch64":      "gsd_aarch64.app.tar.gz",
+    "darwin-aarch64-app":  "gsd_aarch64.app.tar.gz",
+    "darwin-x86_64":       "gsd_x64.app.tar.gz",
+    "darwin-x86_64-app":   "gsd_x64.app.tar.gz",
+    "windows-x86_64":      "gsd_{v}_x64-setup.exe",
+    "windows-x86_64-nsis": "gsd_{v}_x64-setup.exe",
 }
 # latest.json 최상위 필드 집합 — notes 삭제·임의 키 주입을 잡는다(0418f17 판본에서 계승).
 LATEST_JSON_FIELDS = {"version", "notes", "pub_date", "platforms"}
@@ -161,12 +161,12 @@ ASSET_SHAPES = (
 #   서명된 설치 파일(검토되지 않은 서명 경로가 돌았다는 뜻), signed-unverified·signed-verified 마커, 마커 0개·2개.
 #   문구 정본은 release.yml 의 releaseBody 다 — test_release_verify.py 가 그 문면을 이 검사에 통과시켜 생산자와 관문이
 #   어긋나지 않음을 태그 전에 잰다.
-SAC_TOKEN = "cys-win-sac"
-SAC_MARKER_RE = re.compile(r"<!--\s*cys-win-sac:\s*(.*?)\s*-->", re.S)
+SAC_TOKEN = "gsd-win-sac"
+SAC_MARKER_RE = re.compile(r"<!--\s*gsd-win-sac:\s*(.*?)\s*-->", re.S)
 SAC_UNSIGNED = "unsigned"
 SAC_KEY_PHRASES = (
-    "이 판의 cys 설치 파일과 cys 실행파일은 코드 서명이 없습니다",
-    "this release's cys installer and cys executables are not code-signed",
+    "이 판의 gsd 설치 파일과 gsd 실행파일은 코드 서명이 없습니다",
+    "this release's gsd installer and gsd executables are not code-signed",
 )
 # PE 헤더는 파일 머리에 있다(실물 e_lfanew 는 수백 바이트). 1 MiB 를 넘는 헤더 위치는 손상으로 본다.
 PE_HEAD_LIMIT = 1 << 20
@@ -245,8 +245,8 @@ def check_version_tokens(version, names):
 
 def check_windows_zip(version, files):
     """zip 이 setup.exe **한 개**만, 바이트 동일하게 품고 있는지(0418f17 판본에서 계승)."""
-    exe = "cys_%s_x64-setup.exe" % version
-    zipname = "cys_%s_x64-setup.zip" % version
+    exe = "gsd_%s_x64-setup.exe" % version
+    zipname = "gsd_%s_x64-setup.zip" % version
     with zipfile.ZipFile(files[zipname]) as archive:
         members = archive.namelist()
         if members != [exe]:
@@ -364,7 +364,7 @@ def check_latest_json(version, files, sums):
                              sorted(LATEST_JSON_FIELDS)))
     if latest.get("version") != version:
         raise VerifyError("latest.json version 불일치: %r (기대 %s)" % (latest.get("version"), version))
-    # notes 는 값을 못박지 않는다 — 옛 판본이 `f"cys {version}"` 로 박았다가 실물(한국어 안내
+    # notes 는 값을 못박지 않는다 — 옛 판본이 `f"gsd {version}"` 로 박았다가 실물(한국어 안내
     # 문장)과 어긋나 깨졌다. "비어 있지 않은 문자열"까지만 요구한다.
     if not isinstance(latest.get("notes"), str) or not latest["notes"].strip():
         raise VerifyError("latest.json notes 가 비어 있거나 문자열이 아니다: %r" % (latest.get("notes"),))
@@ -462,14 +462,14 @@ def check_sac_text(text, where):
     """SAC 고지 문면 대조 — 마커는 정확히 하나여야 하고 그 값은 `unsigned`, 두 핵심 문구가 모두 있어야 한다."""
     n = text.count(SAC_TOKEN)
     if n == 0:
-        raise VerifyError("windows-sac: %s 에 SAC 고지 마커(<!-- cys-win-sac: unsigned -->)가 없다 — "
+        raise VerifyError("windows-sac: %s 에 SAC 고지 마커(<!-- gsd-win-sac: unsigned -->)가 없다 — "
                           "서명 없는 Windows 판은 그 사실을 적지 않으면 공개할 수 없다" % where)
     if n > 1:
         raise VerifyError("windows-sac: %s 에 SAC 마커가 %d개다 — 정확히 하나여야 한다" % (where, n))
     m = SAC_MARKER_RE.search(text)
     value = m.group(1) if m else None
     if value is None:
-        raise VerifyError("windows-sac: %s 의 SAC 마커 형식이 깨졌다(`<!-- cys-win-sac: unsigned -->`)" % where)
+        raise VerifyError("windows-sac: %s 의 SAC 마커 형식이 깨졌다(`<!-- gsd-win-sac: unsigned -->`)" % where)
     if value.startswith("signed-verified"):
         raise VerifyError("windows-sac: %s 가 signed-verified 다 — 서명·SAC 검증 고지는 설치 파일 해시·버전·런 id 에 결속된 "
                           "신뢰된 실 SAC 보고가 필요하며 이 판에서는 지원하지 않는다" % where)
@@ -483,7 +483,7 @@ def check_sac_text(text, where):
 
 def check_windows_sac(version, files, body_text):
     """D6-b — 공개 대상 setup.exe 의 실제 서명 상태와 사용자가 읽는 두 문면(본문 · latest.json notes)을 대조한다."""
-    setup = "cys_{v}_x64-setup.exe".format(v=version)
+    setup = "gsd_{v}_x64-setup.exe".format(v=version)
     if setup not in files:
         # REQUIRED_ASSETS(2단계)가 이미 강제하므로 도달하면 상수 회귀다 — n/a 로 통과시키지 않는다.
         raise VerifyError("windows-sac: %s 가 없다 — 대조할 대상이 없으면 판정할 수 없다" % setup)

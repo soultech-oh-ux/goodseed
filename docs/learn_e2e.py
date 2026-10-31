@@ -21,8 +21,8 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LEARN = os.path.join(ROOT, "cysjavis-pack", "bin", "javis_learn.py")
-GATE = os.path.join(ROOT, "cysjavis-pack", "bin", "rsi-gate.sh")
+LEARN = os.path.join(ROOT, "gsdjavis-pack", "bin", "javis_learn.py")
+GATE = os.path.join(ROOT, "gsdjavis-pack", "bin", "rsi-gate.sh")
 FAIL = []
 
 
@@ -44,8 +44,8 @@ def git(args, cwd):
 
 
 def run_learn(args, cwd, env_extra=None, stdin=None):
-    env = dict(os.environ, CYS_ROUND_DIR=os.path.join(cwd, "_round"),
-               CYS_PACK_DIR=os.path.join(cwd, "pack"))
+    env = dict(os.environ, GSD_ROUND_DIR=os.path.join(cwd, "_round"),
+               GSD_PACK_DIR=os.path.join(cwd, "pack"))
     if env_extra:
         env.update(env_extra)
     return subprocess.run([sys.executable, LEARN] + args, cwd=cwd, capture_output=True,
@@ -94,7 +94,7 @@ def main():
     check("slugify 슬러그 안전화", m.slugify("CSS @layer 전파!") .replace("-", "").isalnum())
 
     # ── (2) 정상 경로 (격리 git repo) ──
-    with tempfile.TemporaryDirectory(prefix="cys-learn-") as d:
+    with tempfile.TemporaryDirectory(prefix="gsd-learn-") as d:
         git(["init", "-q"], d)
         git(["config", "user.email", "t@t"], d)
         git(["config", "user.name", "t"], d)
@@ -267,7 +267,7 @@ def main():
             check(name, rr.returncode == 1, f"rc={rr.returncode} {rr.stderr}")
 
         deny("gate 복구수단 불변 DENY(1)", lambda i: i.__setitem__("target_paths", ["refs/rsi/ckpt"]))
-        deny("gate 고위험 무서명 DENY(1)", lambda i: i.__setitem__("target_paths", ["cysjavis-pack/bin/javis_rsi.py"]))
+        deny("gate 고위험 무서명 DENY(1)", lambda i: i.__setitem__("target_paths", ["gsdjavis-pack/bin/javis_rsi.py"]))
         deny("gate fallback+confirmed DENY(1)", lambda i: i.__setitem__("fallback_mode", True))
         deny("gate 출처 fetch_log0 DENY(1)", lambda i: i["dimensions"]["source"].__setitem__("fetch_log", False))
         deny("gate 스냅샷 해시 위변조 DENY(1)", lambda i: i["snapshot"].__setitem__("sha256_expected", "deadbeef" * 8))
@@ -293,7 +293,7 @@ def main():
 
         # 고위험 + 인간서명 → allow
         signed = copy.deepcopy(base)
-        signed["target_paths"] = ["cysjavis-pack/bin/javis_rsi.py"]
+        signed["target_paths"] = ["gsdjavis-pack/bin/javis_rsi.py"]
         signed["human_signed"] = True
         r = run_gate(signed, d)
         check("gate 고위험 인간서명 allow(0)", r.returncode == 0, r.stdout + r.stderr)

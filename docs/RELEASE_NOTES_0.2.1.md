@@ -1,4 +1,4 @@
-# cys 0.2.1
+# gsd 0.2.1
 
 **구독 없이도 쓰는 자비스** — agy·codex 구독·CLI가 없는 사용자를 위한 리뷰어 무구독 폴백과,
 PUBLIC repo 발행 안전 가드레일을 추가했습니다. (Apple Silicon arm64 빌드)
@@ -19,7 +19,7 @@ agy(Antigravity)·codex는 검증·반박 리뷰어의 *기본 전제*일 뿐 �
 ### PUBLIC repo 발행 안전 가드레일 4종
 오픈소스 공개 저장소에 개인정보 유출 없이 "전부 올리기"를 지속 가능하게 만드는 장치입니다.
 
-- **.gitignore 강화** — `cysjavis-pack/memory/*` 차단(색인·템플릿만 allowlist) + `*.bak-*`:
+- **.gitignore 강화** — `gsdjavis-pack/memory/*` 차단(색인·템플릿만 allowlist) + `*.bak-*`:
   `git add -A`로 개인 기억·계정이 공개되는 전방 위험을 영구 차단.
 - **scripts/secret-scan.sh** — 개인경로·프로필·이메일·토큰 fail-closed 게이트(deny-by-default·
   스캐너 self-skip·정적매칭 근본한계 명문화). pre-commit 훅으로 설치 가능.

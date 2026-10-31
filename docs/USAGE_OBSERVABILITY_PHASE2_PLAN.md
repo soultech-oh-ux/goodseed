@@ -15,9 +15,9 @@ cat _round/SESSION_STATE.md       # 현재 위치·노드 상태·다음 액션
 cat docs/USAGE_OBSERVABILITY_PHASE2_PLAN.md   # 이 문서 (Phase 2 명세)
 
 # 2) 시스템 생존 확인
-pgrep -x cysd && cys ping         # 데몬 살아있나
-cys status --json | python3 -m json.tool | grep -E 'role|usage|ctx_pct'  # 배지 가동 확인
-python3 "$HOME/.cys/pack/bin/javis_preflight.py"   # READY 확인
+pgrep -x gsdd && gsd ping         # 데몬 살아있나
+gsd status --json | python3 -m json.tool | grep -E 'role|usage|ctx_pct'  # 배지 가동 확인
+python3 "$HOME/.gsd/pack/bin/javis_preflight.py"   # READY 확인
 
 # 3) Phase 1 회귀 검증 (깨지지 않았나)
 cargo test 2>&1 | grep "test result"   # 178 passed 기대
@@ -25,7 +25,7 @@ cargo test 2>&1 | grep "test result"   # 178 passed 기대
 ```
 
 **Phase 1이 현재 무엇을 하는가** (재접속 시 이미 가동 중):
-- cysd가 2초 틱으로 claude 트랜스크립트(`~/.claude*/projects/<munged>/<sess>.jsonl`)와
+- gsdd가 2초 틱으로 claude 트랜스크립트(`~/.claude*/projects/<munged>/<sess>.jsonl`)와
   codex rollout(`~/.codex/sessions/.../rollout-*.jsonl`)을 증분 tail → `Surface.observed_usage` 갱신.
 - claude: context%만 (rate limit은 로컬 파일에 없음 → **Phase 2-A가 채운다**).
 - codex: context% + rate limit 5h/7d (이미 완성).
@@ -67,11 +67,11 @@ https://code.claude.com/docs/en/statusline 의 stdin 스키마(실측·CLI 2.1.1
   계산식과 동일. 즉 statusline은 transcript tail의 **상위 호환**(rate limit까지 줌·서버 진실값).
 
 ### 1.2 설계 — 새 RPC `usage.report` + 래퍼 스크립트 + preflight 설치
-claude가 statusline을 실행할 때마다 stdin JSON을 받아 cysd에 push하는 **tee 래퍼**를 settings에 건다.
+claude가 statusline을 실행할 때마다 stdin JSON을 받아 gsdd에 push하는 **tee 래퍼**를 settings에 건다.
 
 **구현 단계 (체크리스트):**
 
-- [ ] **(1) 새 RPC `usage.report`** — `src/bin/cysd/handlers.rs`
+- [ ] **(1) 새 RPC `usage.report`** — `src/bin/gsdd/handlers.rs`
   - params: `{surface_id, ctx_pct, ctx_tokens, ctx_window, rate:[{label,used_pct,resets_at}], cost_usd?}`
   - 소유 게이트 = `usage.register`와 **동형 복붙**(caller_sid != sid 거부, 익명 통과).
   - `Surface.observed_usage`를 `source:"statusline"`로 직접 갱신 (transcript tail보다 우선).
@@ -90,29 +90,29 @@ claude가 statusline을 실행할 때마다 stdin JSON을 받아 cysd에 push하
     수집을 스킵(등록된 statusline이 더 정확). **단순안 권장**: `Surface`에 statusline 보고
     시각 기록 → collect_for가 claude+신선 statusline이면 skip.
 
-- [ ] **(3) 래퍼 스크립트** `cysjavis-pack/hooks/cys-statusline.sh` (pack 임베드 — `src/pack.rs` PACK 배열 추가)
+- [ ] **(3) 래퍼 스크립트** `gsdjavis-pack/hooks/gsd-statusline.sh` (pack 임베드 — `src/pack.rs` PACK 배열 추가)
   ```sh
   #!/bin/sh
-  # Claude Code statusline: stdin JSON을 cysd에 tee하고, 기존 statusline(있으면) 출력 위임.
+  # Claude Code statusline: stdin JSON을 gsdd에 tee하고, 기존 statusline(있으면) 출력 위임.
   IN=$(cat)   # statusline은 stdin 1회 — 전량 읽어도 안전(후속 소비자 없음)
-  [ -n "$CYS_SURFACE_ID" ] && command -v cys >/dev/null 2>&1 && \
-    printf '%s' "$IN" | cys usage-report-stdin >/dev/null 2>&1   # 새 CLI(아래)
-  # 사람이 보는 statusline 한 줄 (기존 체인 보존: CYS_PREV_STATUSLINE 있으면 위임)
-  if [ -n "$CYS_PREV_STATUSLINE" ]; then printf '%s' "$IN" | sh -c "$CYS_PREV_STATUSLINE"
+  [ -n "$GSD_SURFACE_ID" ] && command -v gsd >/dev/null 2>&1 && \
+    printf '%s' "$IN" | gsd usage-report-stdin >/dev/null 2>&1   # 새 CLI(아래)
+  # 사람이 보는 statusline 한 줄 (기존 체인 보존: GSD_PREV_STATUSLINE 있으면 위임)
+  if [ -n "$GSD_PREV_STATUSLINE" ]; then printf '%s' "$IN" | sh -c "$GSD_PREV_STATUSLINE"
   else printf '%s' "$IN" | python3 -c 'import sys,json; d=json.load(sys.stdin); cw=d.get("context_window",{}); rl=d.get("rate_limits",{}); print(f"{d.get(\"model\",{}).get(\"display_name\",\"?\")} · CTX {cw.get(\"used_percentage\",0):.0f}% · 5h {rl.get(\"five_hour\",{}).get(\"used_percentage\",0):.0f}%")' 2>/dev/null
   fi
   ```
-  - 새 CLI `cys usage-report-stdin`: stdin JSON 파싱 → usage.report RPC. (Rust에서 파싱 —
-    `src/bin/cys.rs`에 `UsageReportStdin` 커맨드. surface는 CYS_SURFACE_ID.)
-  - claude는 statusline command를 **셸로 실행**하므로 `$CYS_SURFACE_ID` env가 PTY에서 상속됨(확인 필요).
+  - 새 CLI `gsd usage-report-stdin`: stdin JSON 파싱 → usage.report RPC. (Rust에서 파싱 —
+    `src/bin/gsd.rs`에 `UsageReportStdin` 커맨드. surface는 GSD_SURFACE_ID.)
+  - claude는 statusline command를 **셸로 실행**하므로 `$GSD_SURFACE_ID` env가 PTY에서 상속됨(확인 필요).
 
-- [ ] **(4) preflight C28 — statusline 설치/검증** `cysjavis-pack/bin/javis_preflight.py`
-  - `discover_claude_settings()`(이미 cys.rs에 있음 — Python 포팅 or cys 서브커맨드 호출)로
+- [ ] **(4) preflight C28 — statusline 설치/검증** `gsdjavis-pack/bin/javis_preflight.py`
+  - `discover_claude_settings()`(이미 gsd.rs에 있음 — Python 포팅 or gsd 서브커맨드 호출)로
     `~/.claude*/settings.json` 전부 찾아 `statusLine` 필드 설치:
     ```json
-    "statusLine": {"type":"command","command":"sh $HOME/.cys/pack/hooks/cys-statusline.sh"}
+    "statusLine": {"type":"command","command":"sh $HOME/.gsd/pack/hooks/gsd-statusline.sh"}
     ```
-  - **기존 statusLine 보존**: 이미 있으면 그 command를 `CYS_PREV_STATUSLINE` env로 래핑(체인).
+  - **기존 statusLine 보존**: 이미 있으면 그 command를 `GSD_PREV_STATUSLINE` env로 래핑(체인).
     덮어쓰기 금지 — hook 설치(install_claude_hook)와 동일한 보존 철학.
   - `--fix`로 설치, 무인자로 검증(설치됨 READY / 미설치 WARN). symlink 거부·백업 등 install_claude_hook 패턴 재사용.
   - ★주의: settings.json 수정은 **claude 재시작 후 적용**. preflight 출력에 "재시작 필요" 명시.
@@ -120,7 +120,7 @@ claude가 statusline을 실행할 때마다 stdin JSON을 받아 cysd에 push하
 - [ ] **(5) 검증**
   - 단위: usage.report 소유 게이트 핀(usage_register와 동형 3종) + statusline JSON 파서 핀
     (rate_limits.five_hour/seven_day 추출, rate_limits 부재 시 ctx만).
-  - E2E: 샌드박스에 가짜 statusline JSON을 `cys usage-report-stdin`으로 흘려 배지에 5h/7d 노출 확인.
+  - E2E: 샌드박스에 가짜 statusline JSON을 `gsd usage-report-stdin`으로 흘려 배지에 5h/7d 노출 확인.
   - 라이브: settings 설치 → claude 노드 재기동 → 배지에 `CTX n% · 5h n% · 7d n%` 등장 실측.
 
 ### 1.3 리스크·결정 사항
@@ -165,7 +165,7 @@ curl -s -X POST ".../RetrieveUserQuotaSummary" -H 'content-type: application/jso
   - context window는 agy가 안 주면 None (배지는 쿼터만 — `5h`/`7d` 대신 모델별 잔량).
 - [ ] **(2) graceful degrade** — 포트 미발견·RPC 실패·파싱 실패 시 `observed_usage` 미갱신(배지 없음
   유지). 절대 패닉·스팸 금지. 실패를 `usage.probe_failed`(저빈도) 이벤트로만 1회 기록.
-- [ ] **(3) HTTP 클라이언트**: cysd에 이미 reqwest 있는지 확인(`Cargo.toml`). 없으면 ureq(경량·동기)
+- [ ] **(3) HTTP 클라이언트**: gsdd에 이미 reqwest 있는지 확인(`Cargo.toml`). 없으면 ureq(경량·동기)
   추가 — 수집기는 동기 컨텍스트(blocking)라 ureq가 적합. **틱 블로킹 주의**: 타임아웃 2초 강제,
   실패 시 즉시 포기(수집기 태스크가 멈추면 안 됨 — Phase 1 패닉 격리와 별개로 타임아웃 필수).
 - [ ] **(4) 검증**: 라이브 프로브 응답을 fixture로 단위 핀, agy 노드 떠 있을 때 배지 등장 실측.
@@ -193,7 +193,7 @@ pane별 배지(Phase 1)는 "지금 이 작업"용. 대시보드는 **전 계정 
   - 계정별 행: `claude  5h ▓▓▓▓░ 41%  7d ▓░ 12%` + reset 상대시각(`↻2h13m`).
   - 색상: Phase 1 sevClass 재사용(70/90). 가장 임박한 reset 강조.
 - [ ] **(3) 스타일**: `ui/src/style.css`에 `.usage-dashboard` — 사이드바 톤과 일치(헤어라인 등 기존 톤).
-- [ ] **(4) 빌드·검증**: `sh ui/build.sh` → cys-app 재빌드 → 번들 교체 → 앱 재시작 후 육안 확인.
+- [ ] **(4) 빌드·검증**: `sh ui/build.sh` → gsd-app 재빌드 → 번들 교체 → 앱 재시작 후 육안 확인.
   - playwright-mcp로 스크린샷 회귀(`.playwright-mcp/` 이미 있음).
 
 ### 3.3 결정 사항 (재접속 시 오너께)
@@ -220,36 +220,36 @@ pane별 배지(Phase 1)는 "지금 이 작업"용. 대시보드는 **전 계정 
 
 ## 5. 회귀 자산 (재접속 시 검증용 — 영구 보존)
 
-- **E2E 스크립트**: `docs/usage_e2e.py` (원본 /tmp/cys-e2e-usage.py — /tmp는 재부팅 소실되므로 docs로 복사).
+- **E2E 스크립트**: `docs/usage_e2e.py` (원본 /tmp/gsd-e2e-usage.py — /tmp는 재부팅 소실되므로 docs로 복사).
   샌드박스 데몬 기동 후 실행 → 20/20 PASS 기대. 실행법은 파일 상단 docstring + 아래.
   ```bash
-  SOCK=/tmp/cys-e2e-$$.sock
-  CYS_SOCKET=$SOCK CYS_PACK_DIR=/tmp/cys-e2e-pack CYS_USAGE_POLL_SECS=1 ./target/debug/cysd &
+  SOCK=/tmp/gsd-e2e-$$.sock
+  GSD_SOCKET=$SOCK GSD_PACK_DIR=/tmp/gsd-e2e-pack GSD_USAGE_POLL_SECS=1 ./target/debug/gsdd &
   # docs/usage_e2e.py 상단 SOCK= 를 위 값으로 맞추고:
   python3 docs/usage_e2e.py
   ```
-- **단위 테스트**: `src/bin/cysd/usage.rs` mod tests (파서·tail·munge), `handlers.rs` usage_register_* 3종,
-  `cys.rs` expand_tilde, `main.rs` env_scrub. `cargo test` 178 passed.
+- **단위 테스트**: `src/bin/gsdd/usage.rs` mod tests (파서·tail·munge), `handlers.rs` usage_register_* 3종,
+  `gsd.rs` expand_tilde, `main.rs` env_scrub. `cargo test` 178 passed.
 - **적대 리뷰 요약**: `scratch/r3_review_summary.txt` (R1 발견·수정 내역).
 
 ## 6. 핵심 파일 지도 (Phase 2 작업 위치)
 
 | 작업 | 파일 | 진입 지점 |
 |---|---|---|
-| usage.report RPC | `src/bin/cysd/handlers.rs` | `"usage.register" =>` 블록 바로 아래에 복제 |
-| 게이트 헬퍼 추출 | `src/bin/cysd/handlers.rs` + `usage.rs` | context.threshold 발화 3곳 → 1 헬퍼 |
-| agy/statusline 수집 | `src/bin/cysd/usage.rs` | `collect_for`의 `match agent` |
-| CLI 커맨드 | `src/bin/cys.rs` | `UsageRegister` 커맨드 옆 |
-| 래퍼 스크립트 임베드 | `src/pack.rs` PACK 배열 + `cysjavis-pack/hooks/` | session-start.sh 패턴 |
-| preflight C28 | `cysjavis-pack/bin/javis_preflight.py` | C03(hook) 검사 패턴 |
+| usage.report RPC | `src/bin/gsdd/handlers.rs` | `"usage.register" =>` 블록 바로 아래에 복제 |
+| 게이트 헬퍼 추출 | `src/bin/gsdd/handlers.rs` + `usage.rs` | context.threshold 발화 3곳 → 1 헬퍼 |
+| agy/statusline 수집 | `src/bin/gsdd/usage.rs` | `collect_for`의 `match agent` |
+| CLI 커맨드 | `src/bin/gsd.rs` | `UsageRegister` 커맨드 옆 |
+| 래퍼 스크립트 임베드 | `src/pack.rs` PACK 배열 + `gsdjavis-pack/hooks/` | session-start.sh 패턴 |
+| preflight C28 | `gsdjavis-pack/bin/javis_preflight.py` | C03(hook) 검사 패턴 |
 | UI 대시보드 | `ui/src/main.ts` + `style.css` | refreshPaneTitles·사이드바 |
-| 배포 | (런북) | memory `cys-terminal-deploy-runbook` — pgrep -x cysd·os.replace·denylist |
+| 배포 | (런북) | memory `gsd-terminal-deploy-runbook` — pgrep -x gsdd·os.replace·denylist |
 
 ## 7. 배포 절차 (Phase 1에서 확립 — memory에도 박제)
-1. `cargo test` 통과 → `sh scripts/bundle-prep.sh`(UI+release cys/cysd) → `cargo build --release -p cys-app`.
-2. python `os.replace`로 `/Applications/cys.app/Contents/MacOS/{cys,cysd,cys-app}` 원자 교체(.bak-<tag>).
-3. `pgrep -x cysd`로 정확한 pid kill → `cys ping` 자동 재기동 → `cys boot`.
-4. ★데몬 재기동 전 `cys status --json`으로 전 노드 idle 확인 — 워커 장기 턴 중 강행 금지.
+1. `cargo test` 통과 → `sh scripts/bundle-prep.sh`(UI+release gsd/gsdd) → `cargo build --release -p gsd-app`.
+2. python `os.replace`로 `/Applications/gsd.app/Contents/MacOS/{gsd,gsdd,gsd-app}` 원자 교체(.bak-<tag>).
+3. `pgrep -x gsdd`로 정확한 pid kill → `gsd ping` 자동 재기동 → `gsd boot`.
+4. ★데몬 재기동 전 `gsd status --json`으로 전 노드 idle 확인 — 워커 장기 턴 중 강행 금지.
 5. preflight READY · 라이브 배지 실측 · SESSION_STATE 갱신.
 
 ---

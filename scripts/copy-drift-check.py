@@ -62,7 +62,7 @@ import sys
 import urllib.error
 import urllib.request
 
-REPO_DEFAULT = "idoforgod/cys-terminal"
+REPO_DEFAULT = "idoforgod/gsd-terminal"
 BASELINE_DEFAULT = "main"
 
 # ★감시 경로 — ⛔**개수를 여기 적지 않는다.** 세는 곳은 ★아래 리스트 하나뿐이고, 숫자가 필요한
@@ -200,7 +200,7 @@ def api_get(url_path):
         headers={
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "cys-copy-drift-check",
+            "User-Agent": "gsd-copy-drift-check",
         },
     )
     token = _token()

@@ -61,7 +61,7 @@ pub fn override_path(role: &str) -> PathBuf {
 
 /// 노브 1개 검증 (CLI hard-reject·런타임 폴백 공용 순수함수). Ok=유효값.
 pub fn validate_knob(key: &str, value: u64, expert: bool) -> Result<u64, String> {
-    let k = knob(key).ok_or_else(|| format!("unknown param '{key}' (cys persona list-params 참고)"))?;
+    let k = knob(key).ok_or_else(|| format!("unknown param '{key}' (gsd persona list-params 참고)"))?;
     let hi = if expert { k.expert_max } else { k.max };
     if value < k.min || value > hi {
         return Err(format!(
@@ -244,7 +244,7 @@ mod tests {
     fn with_pack_dir<T>(write_json: Option<(&str, &str)>, role: &str, f: impl FnOnce() -> T) -> T {
         // pack.rs 테스트와 동일 락 공유 — 같은 lib 바이너리에서 ENV_PACK_DIR 전역 경합 차단.
         let _g = crate::pack::PACK_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-        let td = std::env::temp_dir().join(format!("cys-ov-{}-{}", std::process::id(), role));
+        let td = std::env::temp_dir().join(format!("gsd-ov-{}-{}", std::process::id(), role));
         let _ = std::fs::remove_dir_all(&td);
         std::fs::create_dir_all(td.join("overrides")).unwrap();
         if let Some((name, body)) = write_json {

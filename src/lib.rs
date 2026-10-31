@@ -1,4 +1,4 @@
-//! cys (CYSJavis Terminal) — shared protocol types, socket path resolution, and key mapping.
+//! gsd (GSDJavis Terminal) — shared protocol types, socket path resolution, and key mapping.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -12,19 +12,21 @@ pub mod pack;
 pub mod packsig;
 pub mod overrides;
 pub mod wire;
+pub mod workspace;
 #[cfg(target_os = "macos")]
 pub mod launchd;
 
-pub const ENV_SOCKET: &str = "CYS_SOCKET";
-pub const ENV_SURFACE_ID: &str = "CYS_SURFACE_ID";
-pub const ENV_SURFACE_REF: &str = "CYS_SURFACE_REF";
-pub const ENV_ROLE: &str = "CYS_ROLE";
+pub const ENV_SOCKET: &str = "GSD_SOCKET";
+pub const ENV_SURFACE_ID: &str = "GSD_SURFACE_ID";
+pub const ENV_SURFACE_REF: &str = "GSD_SURFACE_REF";
+pub const ENV_ROLE: &str = "GSD_ROLE";
 
-/// 이행기 호환: CYS_* 우선 → 구 JAVIS_* → 구 AITERM_* 순 폴백.
+/// 이행기 호환: GSD_* 우선 → 구 JAVIS_* → 구 AITERM_* 순 폴백.
 pub fn env_compat(primary: &str) -> Option<String> {
-    let javis = primary.replacen("CYS_", "JAVIS_", 1);
-    let aiterm = primary.replacen("CYS_", "AITERM_", 1);
-    [primary, javis.as_str(), aiterm.as_str()]
+    let legacy = primary.replacen("GSD_", "CYS_", 1);
+    let javis = primary.replacen("GSD_", "JAVIS_", 1);
+    let aiterm = primary.replacen("GSD_", "AITERM_", 1);
+    [primary, legacy.as_str(), javis.as_str(), aiterm.as_str()]
         .iter()
         .find_map(|k| std::env::var(k).ok().filter(|v| !v.is_empty()))
 }
@@ -47,8 +49,8 @@ pub fn err_response(id: &Value, code: &str, message: &str) -> Value {
     serde_json::json!({"id": id, "ok": false, "error": {"code": code, "message": message}})
 }
 
-/// Default socket path: ~/.local/state/cys/cys.sock (unix),
-/// \\.\pipe\goodseed (windows). Overridable via CYS_SOCKET (legacy JAVIS_/AITERM_ honored).
+/// Default socket path: ~/.local/state/gsd/gsd.sock (unix),
+/// \\.\pipe\goodseed (windows). Overridable via GSD_SOCKET (legacy JAVIS_/AITERM_ honored).
 pub fn socket_path() -> PathBuf {
     if let Some(p) = env_compat(ENV_SOCKET) {
         return PathBuf::from(p);
@@ -63,18 +65,18 @@ pub fn socket_path() -> PathBuf {
             .or_else(dirs::home_dir)
             .unwrap_or_else(|| PathBuf::from("/tmp"));
         let dir = if base.ends_with(".local/state") || base.to_string_lossy().contains("state") {
-            base.join("cys")
+            base.join("gsd")
         } else {
-            base.join(".local/state/cys")
+            base.join(".local/state/gsd")
         };
-        dir.join("cys.sock")
+        dir.join("gsd.sock")
     }
 }
 
-/// Windows named pipe busy-retry 정책 — CLI(cys)·GUI(cys-app) 클라이언트 공용 **단일 진실**
+/// Windows named pipe busy-retry 정책 — CLI(gsd)·GUI(gsd-app) 클라이언트 공용 **단일 진실**
 /// (이원 정의는 정책 변경 시 샷건 서저리). ERROR_PIPE_BUSY(os error 231, "모든 파이프
 /// 인스턴스가 사용 중")는 데몬 다운이 아니라 listening 인스턴스 순간 소진(정상 혼잡)이다 —
-/// 서버(cysd 리스너 풀)는 accept 직후 인스턴스를 재생성하므로 잠깐 기다리면 열린다.
+/// 서버(gsdd 리스너 풀)는 accept 직후 인스턴스를 재생성하므로 잠깐 기다리면 열린다.
 /// Microsoft 파이프 클라이언트 계약상 busy 는 대기·재시도가 필수(WaitNamedPipe 관례)이며,
 /// 재시도 없는 1회 open 은 멀티 노드 동시 RPC 에서 상시 실패한다(2026-07-10 Windows 실사고).
 /// 그 외 오류(파이프 부재 = 데몬 다운 등)는 즉시 반환이 계약이다(autostart 판단은 호출부 몫).
@@ -83,7 +85,7 @@ pub const PIPE_BUSY_ERROR: i32 = 231;
 pub const PIPE_BUSY_RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(25);
 pub const PIPE_BUSY_RETRY_DEADLINE: std::time::Duration = std::time::Duration::from_secs(5);
 
-/// 동봉 runtime PATH 선두 주입(RC-5 · 공용 — cysd PTY 자식·GUI 직스폰이 공유, 중복 구현 금지).
+/// 동봉 runtime PATH 선두 주입(RC-5 · 공용 — gsdd PTY 자식·GUI 직스폰이 공유, 중복 구현 금지).
 /// `exe_dir`(바이너리 폴더) + Windows 자기완결 설치의 `<install>\runtime\{python, git\cmd, git\usr\bin}`
 /// 중 **실재하는** 디렉토리를 `current_path` 앞에 (중복 제거) 얹은 새 PATH를 반환. 얹을 게 없으면
 /// None(기존 동작 무변경). current_path를 인자로 받아 순수 함수(테스트 가능·env 비의존).
@@ -397,24 +399,24 @@ fn read_registry_string(
 
 /// 홈 디렉토리(RC-7 공용). Windows는 HOME 미설정이 기본이라 `env::var("HOME")`은 빈값으로 폴백돼
 /// `~/.goodseed/...` 경로를 CWD 상대경로로 붕괴시킨다(부서목록·프로파일·pending-restore 오지정). dirs::home_dir()
-/// (Windows=USERPROFILE/HOMEDRIVE 기반·unix=$HOME)로 OS중립 해소. 코어(cys)·GUI(src-tauri) 공유.
+/// (Windows=USERPROFILE/HOMEDRIVE 기반·unix=$HOME)로 OS중립 해소. 코어(gsd)·GUI(src-tauri) 공유.
 pub fn home_dir() -> PathBuf {
     dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
 }
 
-/// (W1) claude CLAUDE_CONFIG_DIR 결정론 해소 — agents.json의 `${CYS_ACCOUNT_DIR:-$HOME/.goodseed/claude}`와
+/// (W1) claude CLAUDE_CONFIG_DIR 결정론 해소 — agents.json의 `${GSD_ACCOUNT_DIR:-$HOME/.goodseed/claude}`와
 /// 동일 규칙을 **현재 프로세스 env**로 전개한다. pane 셸(=데몬 자식)이 실제로 해소하는 값과 일치하려면
-/// 실제 전개 주체인 **데몬 프로세스에서 호출**하는 것이 권위다(state.rs의 CYS_ACCOUNT_DIR 전파와 정합).
+/// 실제 전개 주체인 **데몬 프로세스에서 호출**하는 것이 권위다(state.rs의 GSD_ACCOUNT_DIR 전파와 정합).
 /// discover 스캔(usage.rs)이 ~/.goodseed/claude를 원리적으로 못 보므로, config_dir 권위는 이 결정론 해소뿐이다.
 pub fn resolve_claude_config_dir() -> String {
-    std::env::var("CYS_ACCOUNT_DIR")
+    std::env::var("GSD_ACCOUNT_DIR")
         .ok()
         .filter(|v| !v.is_empty())
         .unwrap_or_else(|| home_dir().join(".goodseed").join("claude").to_string_lossy().into_owned())
 }
 
 /// Claude Code projects/ 디렉터리명 munge — 실측: '/'와 특수문자가 '-'로 치환된다.
-/// ASCII 영숫자·'-'만 보존하는 보수 구현. resume 사전검증 게이트(cys.rs)와 usage 휴리스틱이 공유한다.
+/// ASCII 영숫자·'-'만 보존하는 보수 구현. resume 사전검증 게이트(gsd.rs)와 usage 휴리스틱이 공유한다.
 pub fn claude_project_component(cwd: &str) -> String {
     cwd.chars()
         .map(|c| {
@@ -427,9 +429,9 @@ pub fn claude_project_component(cwd: &str) -> String {
         .collect()
 }
 
-/// 부서 데몬 소켓/파이프 경로(RC-4 · 공용 — GUI(src-tauri)·cys fleet가 공유, 규약 단일화).
+/// 부서 데몬 소켓/파이프 경로(RC-4 · 공용 — GUI(src-tauri)·gsd fleet가 공유, 규약 단일화).
 /// Windows: named pipe `\\.\pipe\goodseed-dept-<name>`(기본 데몬 `\\.\pipe\goodseed`와 대칭 · RC-13 state_dir
-/// 슬러그 `goodseed-dept-<name>`과 정합). unix: `~/.local/state/goodseed-dept-<name>/cys.sock`(cys-dept 규약).
+/// 슬러그 `goodseed-dept-<name>`과 정합). unix: `~/.local/state/goodseed-dept-<name>/gsd.sock`(gsd-dept 규약).
 /// HOME 미설정 함정(RC-7) 회피 — unix도 dirs::home_dir() 사용.
 pub fn dept_socket_path(name: &str) -> PathBuf {
     #[cfg(windows)]
@@ -442,15 +444,15 @@ pub fn dept_socket_path(name: &str) -> PathBuf {
             .unwrap_or_else(|| PathBuf::from("."))
             .join(".local/state")
             .join(format!("goodseed-dept-{name}"))
-            .join("cys.sock")
+            .join("gsd.sock")
     }
 }
 
 /// 이 소켓/파이프 경로가 부서(dept) 데몬의 것인가 — 부서 규약 `goodseed-dept-<name>`(dept_socket_path와 정합).
-/// 채널은 메인 cysd 단독 소유(DESIGN §2.5)이므로 부서 데몬의 브리지 스폰을 구조적으로 거부하는 데 쓴다.
+/// 채널은 메인 gsdd 단독 소유(DESIGN §2.5)이므로 부서 데몬의 브리지 스폰을 구조적으로 거부하는 데 쓴다.
 /// 판별: 경로 컴포넌트(unix 부모 디렉토리 `goodseed-dept-<name>` / windows 파이프명 `goodseed-dept-<name>`) 중
-/// `goodseed-dept-` 접두 이름이 있으면 부서. 메인 데몬(슬러그 `cys`·`cys.sock`)은 오판하지 않는다
-/// (`cys`는 `goodseed-dept-` 접두가 아님 — 오탐 시 채널 전면 불능이라 접두를 정확히 요구).
+/// `goodseed-dept-` 접두 이름이 있으면 부서. 메인 데몬(슬러그 `gsd`·`gsd.sock`)은 오판하지 않는다
+/// (`gsd`는 `goodseed-dept-` 접두가 아님 — 오탐 시 채널 전면 불능이라 접두를 정확히 요구).
 pub fn is_dept_socket(socket_path: &std::path::Path) -> bool {
     socket_path
         .to_string_lossy()
@@ -552,7 +554,7 @@ mod tests {
         assert_eq!(s, r"\\.\pipe\goodseed-dept-dept-3", "windows named pipe");
         #[cfg(not(windows))]
         {
-            assert!(s.ends_with(".local/state/goodseed-dept-dept-3/cys.sock"), "unix .sock: {s}");
+            assert!(s.ends_with(".local/state/goodseed-dept-dept-3/gsd.sock"), "unix .sock: {s}");
             assert!(!s.starts_with('/') || s.contains("/.local/state/"), "home 기반: {s}");
         }
     }
@@ -561,28 +563,28 @@ mod tests {
     fn is_dept_socket_detects_dept_not_main() {
         // H3: dept_socket_path와 정합 — 부서만 true, 메인은 false(오판=채널 전면 불능이라 접두 정확).
         assert!(is_dept_socket(&dept_socket_path("dept-3")), "부서 소켓은 true");
-        assert!(is_dept_socket(Path::new("/x/.local/state/goodseed-dept-future/cys.sock")));
+        assert!(is_dept_socket(Path::new("/x/.local/state/goodseed-dept-future/gsd.sock")));
         assert!(is_dept_socket(Path::new(r"\\.\pipe\goodseed-dept-3")), "windows 파이프");
         // 메인 데몬 — 오판 금지.
-        assert!(!is_dept_socket(Path::new("/x/.local/state/cys/cys.sock")), "메인 unix");
+        assert!(!is_dept_socket(Path::new("/x/.local/state/gsd/gsd.sock")), "메인 unix");
         assert!(!is_dept_socket(Path::new(r"\\.\pipe\goodseed")), "메인 windows");
-        assert!(!is_dept_socket(Path::new("/tmp/cys_chan_test_1_tag/cysd.sock")), "테스트 임시");
+        assert!(!is_dept_socket(Path::new("/tmp/gsd_chan_test_1_tag/gsdd.sock")), "테스트 임시");
     }
 
     #[test]
     fn runtime_prefixed_path_prepends_exe_dir_and_dedups() {
         // RC-5 회귀 핀(양 OS 공통 로직): exe_dir가 PATH에 없으면 선두에 얹는다.
         let sep = if cfg!(windows) { ';' } else { ':' };
-        let exe = Path::new("/opt/cysapp/bin");
+        let exe = Path::new("/opt/gsdapp/bin");
         let cur = format!("/usr/bin{sep}/bin");
         let got = runtime_prefixed_path(exe, &cur).expect("exe_dir 미포함이면 Some");
-        assert!(got.starts_with("/opt/cysapp/bin"), "exe_dir 선두 주입: {got}");
+        assert!(got.starts_with("/opt/gsdapp/bin"), "exe_dir 선두 주입: {got}");
         #[cfg(windows)]
         {
             assert!(got.ends_with(&cur), "기존 PATH 보존(제거 없음): {got}");
             // 이미 PATH에 있으면(중복) 얹지 않는다 → None(무변경). (windows는 runtime 하위 dir가
             // 실재하면 Some일 수 있으나 이 합성 경로엔 없음.)
-            let already = format!("/opt/cysapp/bin{sep}/usr/bin");
+            let already = format!("/opt/gsdapp/bin{sep}/usr/bin");
             assert_eq!(runtime_prefixed_path(exe, &already), None, "중복이면 무변경");
         }
         #[cfg(not(windows))]
@@ -595,7 +597,7 @@ mod tests {
                 "기존 PATH 보존 + ~/.local/bin 말미 append: {got}"
             );
             // prefixes 도 ~/.local/bin 도 이미 있으면 → None(무변경).
-            let already = format!("/opt/cysapp/bin{sep}/usr/bin{sep}{local}");
+            let already = format!("/opt/gsdapp/bin{sep}/usr/bin{sep}{local}");
             assert_eq!(runtime_prefixed_path(exe, &already), None, "중복이면 무변경");
         }
     }
@@ -628,7 +630,7 @@ mod tests {
         // RC-18(T6b) 회귀 핀: mac 번들 레이아웃(Contents/MacOS·Contents/Resources/runtime)에서
         // python/bin·git/bin·uv·node/bin을 선두 우선순위로 잡는다. 실재 디렉토리만 계상.
         use std::fs;
-        let base = std::env::temp_dir().join(format!("cysrt-t6b-{}", std::process::id()));
+        let base = std::env::temp_dir().join(format!("gsdrt-t6b-{}", std::process::id()));
         let macos = base.join("Contents").join("MacOS");
         let rt = base.join("Contents").join("Resources").join("runtime");
         for d in ["python/bin", "git/bin", "uv", "node/bin"] {
@@ -657,14 +659,14 @@ mod tests {
     fn expand_windows_env_cases() {
         // %VAR% 전개(mac 에서 Windows 로직 검증 — 순수 fn 직접 호출).
         let lk = |k: &str| match k {
-            "USERPROFILE" => Some(r"C:\Users\cys".to_string()),
-            "APPDATA" => Some(r"C:\Users\cys\AppData\Roaming".to_string()),
+            "USERPROFILE" => Some(r"C:\Users\gsd".to_string()),
+            "APPDATA" => Some(r"C:\Users\gsd\AppData\Roaming".to_string()),
             _ => None,
         };
         // 전개.
         assert_eq!(
             expand_windows_env(r"%USERPROFILE%\.local\bin", lk),
-            r"C:\Users\cys\.local\bin"
+            r"C:\Users\gsd\.local\bin"
         );
         // 미지 변수는 원문 유지.
         assert_eq!(expand_windows_env(r"%NOPE%\bin", lk), r"%NOPE%\bin");
@@ -673,7 +675,7 @@ mod tests {
         // 연속 변수(경계 인접).
         assert_eq!(
             expand_windows_env(r"%USERPROFILE%%APPDATA%", lk),
-            r"C:\Users\cysC:\Users\cys\AppData\Roaming"
+            r"C:\Users\gsdC:\Users\gsd\AppData\Roaming"
         );
         // 빈 이름(%%)·미종결 %는 원문 보존(안전 폴백).
         assert_eq!(expand_windows_env(r"50%%off", lk), r"50%%off");
@@ -684,8 +686,8 @@ mod tests {
 
     #[test]
     fn windows_user_bin_dirs_composition() {
-        let home = Path::new(r"C:\Users\cys");
-        let appdata = PathBuf::from(r"C:\Users\cys\AppData\Roaming");
+        let home = Path::new(r"C:\Users\gsd");
+        let appdata = PathBuf::from(r"C:\Users\gsd\AppData\Roaming");
         let with = windows_user_bin_dirs(home, Some(&appdata));
         let got: Vec<String> = with.iter().map(|p| p.to_string_lossy().into_owned()).collect();
         // 경로 구분자는 호스트 OS 규약이라 컴포넌트 존재로 검증(mac 에서도 무결).
@@ -701,21 +703,21 @@ mod tests {
     fn compose_pane_path_rules() {
         let sep = ';';
         let prefixes = vec![r"C:\app\bin".to_string(), r"C:\app\runtime\python".to_string()];
-        let user_bins = vec![r"C:\Users\cys\.local\bin".to_string(), r"C:\Users\cys\AppData\Roaming\npm".to_string()];
+        let user_bins = vec![r"C:\Users\gsd\.local\bin".to_string(), r"C:\Users\gsd\AppData\Roaming\npm".to_string()];
         // ① 낡은 프로세스 PATH(.local\bin 없음) + 신선 레지스트리(.local\bin 있음) →
         //    새 순서: prefixes ; process ; fresh 신규분 ; user_bins 신규분. .local\bin 정확히 1회.
-        let fresh = r"C:\Windows\System32;C:\Users\cys\.local\bin";
+        let fresh = r"C:\Windows\System32;C:\Users\gsd\.local\bin";
         let process = r"C:\Windows\System32;C:\stale";
         let out = compose_pane_path(&prefixes, Some(fresh), &user_bins, process, sep);
         let parts: Vec<&str> = out.split(sep).collect();
         assert_eq!(parts[0], r"C:\app\bin", "prefix 선두: {out}");
         assert_eq!(parts[1], r"C:\app\runtime\python", "runtime 2순위: {out}");
-        let local_count = parts.iter().filter(|&&p| p == r"C:\Users\cys\.local\bin").count();
+        let local_count = parts.iter().filter(|&&p| p == r"C:\Users\gsd\.local\bin").count();
         assert_eq!(local_count, 1, "user bin 정확히 1회(레지스트리·user_bins 중복 dedup): {out}");
         assert!(parts.contains(&r"C:\stale"), "세션 유래 항목 보존: {out}");
         // 세션 유래(process) 항목이 fresh 신규분(.local\bin)보다 앞 — precedence 보존(MAJ#1).
         let stale_idx = parts.iter().position(|&p| p == r"C:\stale").unwrap();
-        let local_idx = parts.iter().position(|&p| p == r"C:\Users\cys\.local\bin").unwrap();
+        let local_idx = parts.iter().position(|&p| p == r"C:\Users\gsd\.local\bin").unwrap();
         assert!(stale_idx < local_idx, "process 항목이 레지스트리 신규분보다 앞: {out}");
         // System32 도 dedup(레지스트리·프로세스 중복) — 1회.
         assert_eq!(parts.iter().filter(|&&p| p == r"C:\Windows\System32").count(), 1, "전체 dedup: {out}");
@@ -726,7 +728,7 @@ mod tests {
         assert_eq!(parts2[0], r"C:\app\bin");
         assert!(parts2.contains(&r"C:\stale") && parts2.contains(&r"C:\Windows\System32"));
         // user_bins 는 여전히 포함(fresh 에 없어도 belt-and-braces).
-        assert!(parts2.contains(&r"C:\Users\cys\.local\bin"));
+        assert!(parts2.contains(&r"C:\Users\gsd\.local\bin"));
 
         // ④ 빈 항목 제거·중복 전면 dedup.
         let out3 = compose_pane_path(&prefixes, Some(";;C:\\dup"), &[], "C:\\dup;C:\\app\\bin;", sep);
@@ -884,7 +886,7 @@ mod tests {
     #[test]
     fn env_compat_fallback_priority() {
         // 고유 키로 격리 (다른 테스트·환경과 충돌 방지)
-        let p = "CYS_ZZUNIQUETEST";
+        let p = "GSD_ZZUNIQUETEST";
         let j = "JAVIS_ZZUNIQUETEST";
         let a = "AITERM_ZZUNIQUETEST";
         for k in [p, j, a] {
@@ -898,9 +900,9 @@ mod tests {
         // JAVIS_가 AITERM_보다 우선
         std::env::set_var(j, "javis_val");
         assert_eq!(env_compat(p), Some("javis_val".to_string()));
-        // CYS_(primary)가 최우선
-        std::env::set_var(p, "cys_val");
-        assert_eq!(env_compat(p), Some("cys_val".to_string()));
+        // GSD_(primary)가 최우선
+        std::env::set_var(p, "gsd_val");
+        assert_eq!(env_compat(p), Some("gsd_val".to_string()));
         // 빈 문자열은 미설정으로 간주 → 다음 폴백
         std::env::set_var(p, "");
         assert_eq!(env_compat(p), Some("javis_val".to_string()));
@@ -910,21 +912,21 @@ mod tests {
     }
 
     #[test]
-    fn env_compat_only_first_cys_token_is_rewritten() {
-        // replacen(..,1)이 'CYS_'를 첫 1회만 치환 — primary에 CYS_가 없으면
+    fn env_compat_only_first_gsd_token_is_rewritten() {
+        // replacen(..,1)이 'GSD_'를 첫 1회만 치환 — primary에 GSD_가 없으면
         // 세 후보 키가 모두 primary와 동일(폴백 무의미)임을 박제.
-        let only = "CYS_ZZONLYPRIMARY";
+        let only = "GSD_ZZONLYPRIMARY";
         let javis = "JAVIS_ZZONLYPRIMARY";
         std::env::remove_var(only);
         std::env::remove_var(javis);
-        // primary에 CYS_가 없는 키: 폴백 키가 자기 자신과 같아져 primary만 본다
-        let nocys = "PLAINKEY_ZZ";
-        std::env::remove_var(nocys);
-        assert_eq!(env_compat(nocys), None);
-        std::env::set_var(nocys, "plain");
-        assert_eq!(env_compat(nocys), Some("plain".to_string()));
-        std::env::remove_var(nocys);
-        // 첫 CYS_만 치환 — 'CYS_'가 값 중간에 또 나와도 1회만
+        // primary에 GSD_가 없는 키: 폴백 키가 자기 자신과 같아져 primary만 본다
+        let nogsd = "PLAINKEY_ZZ";
+        std::env::remove_var(nogsd);
+        assert_eq!(env_compat(nogsd), None);
+        std::env::set_var(nogsd, "plain");
+        assert_eq!(env_compat(nogsd), Some("plain".to_string()));
+        std::env::remove_var(nogsd);
+        // 첫 GSD_만 치환 — 'GSD_'가 값 중간에 또 나와도 1회만
         std::env::set_var(javis, "via_javis");
         assert_eq!(env_compat(only), Some("via_javis".to_string()));
         std::env::remove_var(javis);
@@ -943,13 +945,13 @@ mod tests {
     #[test]
     fn resolve_claude_config_dir_is_deterministic_env_not_scan() {
         // (W1-2 핵심) config_dir 권위는 결정론 env 해소뿐 — discover 스캔(~/.claude*)을 원리적으로
-        // 참조하지 않는다. CYS_ACCOUNT_DIR 설정 시 그 값 그대로, 미설정 시 $HOME/.goodseed/claude.
-        let prev = std::env::var("CYS_ACCOUNT_DIR").ok();
+        // 참조하지 않는다. GSD_ACCOUNT_DIR 설정 시 그 값 그대로, 미설정 시 $HOME/.goodseed/claude.
+        let prev = std::env::var("GSD_ACCOUNT_DIR").ok();
         // (a) 명시 계정 dir → 그 절대경로 그대로 (foreign ~/.claude-* 존재 여부와 무관 = 스캔 안 함)
-        std::env::set_var("CYS_ACCOUNT_DIR", "/tmp/zz-acct/.goodseed/claude");
+        std::env::set_var("GSD_ACCOUNT_DIR", "/tmp/zz-acct/.goodseed/claude");
         assert_eq!(resolve_claude_config_dir(), "/tmp/zz-acct/.goodseed/claude");
         // (b) 빈 문자열 = 미설정 취급 → 기본 $HOME/.goodseed/claude
-        std::env::set_var("CYS_ACCOUNT_DIR", "");
+        std::env::set_var("GSD_ACCOUNT_DIR", "");
         let def = resolve_claude_config_dir();
         assert!(def.ends_with("/.goodseed/claude"), "기본 해소: {def}");
         assert!(
@@ -957,12 +959,12 @@ mod tests {
             "HOME 기반: {def}"
         );
         // (c) 미설정도 동일 기본
-        std::env::remove_var("CYS_ACCOUNT_DIR");
+        std::env::remove_var("GSD_ACCOUNT_DIR");
         assert_eq!(resolve_claude_config_dir(), def);
         // 원복
         match prev {
-            Some(v) => std::env::set_var("CYS_ACCOUNT_DIR", v),
-            None => std::env::remove_var("CYS_ACCOUNT_DIR"),
+            Some(v) => std::env::set_var("GSD_ACCOUNT_DIR", v),
+            None => std::env::remove_var("GSD_ACCOUNT_DIR"),
         }
     }
 }
