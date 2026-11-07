@@ -672,3 +672,10 @@ todo.updated   approval.request   approval.stalled   master.deadman   osc.notify
 - 비밀 스캐너는 정적 패턴 매칭 — 난독화·신종 토큰은 못 잡습니다(1차 방어선일 뿐).
 
 취약점 신고는 [SECURITY.md](SECURITY.md)를 따라 주세요.
+
+## 자연어 제작·맞춤 학습
+
+`gsd ask "초보자인데 할 일 앱을 만들어줘"`로 제작·수정 작업을 요청할 수 있습니다.
+완료한 작업에서 검증 명령 실행 근거가 있는 절차를 저장하고 같은 프로젝트의 다음 요청에 재사용합니다.
+`gsd learn profile --level beginner`로 수준을 설정하고 `gsd learn status`로 절차를 확인합니다.
+자세한 사용법, 학습 끄기와 버전 복원은 [자연어 제작과 학습 안내](docs/adaptive-assistant.md)를 참조하세요.

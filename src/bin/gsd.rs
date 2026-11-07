@@ -22,6 +22,29 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// 자연어로 앱 제작·수정을 요청하고 검증된 작업 절차를 다음 요청에 재사용합니다.
+    Ask {
+        #[arg(long)]
+        cwd: Option<String>,
+        /// beginner | intermediate | advanced (생략하면 저장한 수준)
+        #[arg(long, value_parser = ["beginner", "intermediate", "advanced"])]
+        level: Option<String>,
+        /// 실행 없이 적용할 프롬프트와 재사용 기능을 확인합니다.
+        #[arg(long)]
+        preview: bool,
+        #[arg(long)]
+        no_learn: bool,
+        #[arg(long, default_value_t = 1800, value_parser = clap::value_parser!(u64).range(1..=7200))]
+        timeout: u64,
+        #[arg(required = true)]
+        prompt: Vec<String>,
+    },
+    /// 학습 관리: status, profile --level, on, off, history, rollback, forget (--help 참고).
+    #[command(disable_help_flag = true)]
+    Learn {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     /// 공식 GitHub 배포에서 새 버전을 확인·검증·설치합니다.
     Update {
         #[arg(long)]
@@ -329,14 +352,6 @@ enum Command {
     Feed {
         #[command(subcommand)]
         action: FeedAction,
-    },
-    /// RSI 학습 루프 — 사람 직접 명령(제안 생성) 또는 현재 학습 라운드 상태 조회
-    Learn {
-        /// 학습 주제 (생략하고 --status면 상태 조회)
-        topic: Option<String>,
-        /// 현재 학습 라운드 상태(라운드·verdict·채택/rollback·발견)를 조회
-        #[arg(long)]
-        status: bool,
     },
     /// Install the GSDJavis Pack (multi-agent operating system templates) to ~/.goodseed/pack
     #[command(name = "init-pack", alias = "init-jarvis")]
@@ -1376,6 +1391,44 @@ fn run_goodseed_update(check: bool, preview: bool) -> Result<(), String> {
 
 fn run(command: Command) -> i32 {
     let result = match command {
+        Command::Ask { cwd, level, preview, no_learn, timeout, prompt } => {
+            let mut args = vec!["ask".to_string(), "--timeout".into(), timeout.to_string()];
+            let cwd = cwd.map(Ok).unwrap_or_else(|| gsd::workspace::default_dir().map(|p| p.to_string_lossy().into_owned()));
+            cwd.and_then(|cwd| {
+                args.extend(["--cwd".into(), cwd]);
+                if let Some(level) = level { args.extend(["--level".into(), level]); }
+                if preview { args.push("--preview".into()); }
+                if no_learn { args.push("--no-learn".into()); }
+                args.extend(["--".into(), prompt.join(" ")]);
+                gsd::assistant::run(&args)
+            })
+        },
+        Command::Learn { args } => {
+            // Preserve the existing daemon RSI interface alongside the new local management actions.
+            if args == ["--status"] {
+                return match request("learn.status", json!({})) {
+                    Ok(r) => { println!("{}", serde_json::to_string_pretty(&r).unwrap()); 0 },
+                    Err(e) => { eprintln!("error: {e}"); 1 },
+                };
+            }
+            if args.len() == 1 && !args[0].starts_with('-')
+                && !["status", "on", "off", "profile", "history", "rollback", "forget"].contains(&args[0].as_str()) {
+                return match request("learn.propose", json!({"reason": "manual", "topic": args[0]})) {
+                    Ok(r) => { println!("{}", serde_json::to_string_pretty(&r).unwrap()); 0 },
+                    Err(e) => { eprintln!("error: {e}"); 1 },
+                };
+            }
+            let mut forwarded = vec!["learn".to_string()];
+            // Management defaults to the same workspace as ask, unless explicitly selected.
+            if !args.iter().any(|a| a == "--cwd" || a.starts_with("--cwd=")) {
+                match gsd::workspace::default_dir() {
+                    Ok(cwd) => forwarded.extend(["--cwd".into(), cwd.to_string_lossy().into_owned()]),
+                    Err(e) => { eprintln!("{e}"); return 1; }
+                }
+            }
+            forwarded.extend(args);
+            gsd::assistant::run(&forwarded)
+        },
         Command::Update { check, preview } => run_goodseed_update(check, preview),
         Command::WorkspaceDir => gsd::workspace::default_dir().map(|p| println!("{}", p.display())),
         Command::Ping => request("system.ping", json!({})).map(|r| println!("{}", r.as_str().unwrap_or("pong"))),
@@ -2005,18 +2058,6 @@ fn run(command: Command) -> i32 {
         }),
 
         Command::Feed { action } => return run_feed(action),
-
-        Command::Learn { topic, status } => {
-            if status {
-                request("learn.status", json!({}))
-                    .map(|r| println!("{}", serde_json::to_string_pretty(&r).unwrap()))
-            } else if let Some(t) = topic {
-                request("learn.propose", json!({"reason": "manual", "topic": t}))
-                    .map(|r| println!("{}", serde_json::to_string_pretty(&r).unwrap()))
-            } else {
-                Err("usage: gsd learn <topic> | gsd learn --status".to_string())
-            }
-        }
 
         Command::Schedule { action } => return run_schedule(action),
         Command::CostBaseline { action } => return run_cost_baseline(action),
